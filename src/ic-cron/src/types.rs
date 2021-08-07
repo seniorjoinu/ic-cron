@@ -16,9 +16,9 @@ pub enum Iterations {
 }
 
 #[derive(Clone, CandidType, Deserialize)]
-pub enum SchedulingType {
-    Timeout(u64),
-    Interval((u64, Iterations)),
+pub struct SchedulingInterval {
+    pub duration_nano: u64,
+    pub iterations: Iterations,
 }
 
 #[derive(Clone, CandidType, Deserialize)]
@@ -27,7 +27,7 @@ pub struct Task {
     pub payload: RemoteCallPayload,
     pub scheduled_at: u64,
     pub rescheduled_at: Option<u64>,
-    pub scheduling_type: SchedulingType,
+    pub scheduling_interval: SchedulingInterval,
 }
 
 impl Task {
@@ -38,7 +38,7 @@ impl Task {
         cycles: u64,
         scheduled_at: u64,
         rescheduled_at: Option<u64>,
-        scheduling_type: SchedulingType,
+        scheduling_interval: SchedulingInterval,
     ) -> CandidResult<Self> {
         let payload = RemoteCallPayload {
             endpoint,
@@ -51,7 +51,7 @@ impl Task {
             payload,
             scheduled_at,
             rescheduled_at,
-            scheduling_type,
+            scheduling_interval,
         })
     }
 }

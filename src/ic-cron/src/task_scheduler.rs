@@ -5,7 +5,9 @@ use ic_cdk::export::candid::utils::ArgumentEncoder;
 use ic_cdk::export::candid::{Principal, Result as CandidResult};
 use union_utils::RemoteCallEndpoint;
 
-use crate::types::{Iterations, SchedulingType, Task, TaskExecutionQueue, TaskId, TaskTimestamp};
+use crate::types::{
+    Iterations, SchedulingInterval, Task, TaskExecutionQueue, TaskId, TaskTimestamp,
+};
 
 #[derive(Default)]
 pub struct TaskScheduler {
@@ -20,36 +22,38 @@ impl TaskScheduler {
         endpoint: RemoteCallEndpoint,
         args: Tuple,
         cycles: u64,
-        scheduling_type: SchedulingType,
+        scheduling_interval: SchedulingInterval,
         timestamp: u64,
-    ) -> CandidResult<Task> {
+    ) -> CandidResult<TaskId> {
         let id = self.generate_task_id();
-        let task = Task::new(id, endpoint, args, cycles, timestamp, None, scheduling_type)?;
+        let task = Task::new(
+            id,
+            endpoint,
+            args,
+            cycles,
+            timestamp,
+            None,
+            scheduling_interval,
+        )?;
 
-        match &task.scheduling_type {
-            SchedulingType::Timeout(t) => self.queue.push(TaskTimestamp {
-                task_id: id,
-                timestamp: timestamp + t,
-            }),
-            SchedulingType::Interval((interval, times)) => match times {
-                Iterations::Exact(e) => {
-                    if *e > 0 {
-                        self.queue.push(TaskTimestamp {
-                            task_id: id,
-                            timestamp: timestamp + interval,
-                        })
-                    }
+        match task.scheduling_interval.iterations {
+            Iterations::Exact(times) => {
+                if times > 0 {
+                    self.queue.push(TaskTimestamp {
+                        task_id: id,
+                        timestamp: timestamp + task.scheduling_interval.duration_nano,
+                    })
                 }
-                Iterations::Infinite => self.queue.push(TaskTimestamp {
-                    task_id: id,
-                    timestamp: timestamp + interval,
-                }),
-            },
+            }
+            Iterations::Infinite => self.queue.push(TaskTimestamp {
+                task_id: id,
+                timestamp: timestamp + task.scheduling_interval.duration_nano,
+            }),
         };
 
-        self.tasks.insert(id, task.clone());
+        self.tasks.insert(id, task);
 
-        Ok(task)
+        Ok(id)
     }
 
     pub fn iterate(&mut self, timestamp: u64) -> Vec<Task> {
@@ -67,51 +71,46 @@ impl TaskScheduler {
                 Entry::Occupied(mut entry) => {
                     let task = entry.get_mut();
 
-                    match &task.scheduling_type {
-                        SchedulingType::Timeout(_) => {
-                            should_remove = true;
+                    match task.scheduling_interval.iterations {
+                        Iterations::Infinite => {
+                            let new_rescheduled_at =
+                                if let Some(rescheduled_at) = task.rescheduled_at {
+                                    rescheduled_at + task.scheduling_interval.duration_nano
+                                } else {
+                                    task.scheduled_at + task.scheduling_interval.duration_nano
+                                };
+
+                            task.rescheduled_at = Some(new_rescheduled_at);
+
+                            self.queue.push(TaskTimestamp {
+                                task_id,
+                                timestamp: new_rescheduled_at
+                                    + task.scheduling_interval.duration_nano,
+                            });
                         }
-                        SchedulingType::Interval((interval, iterations)) => match iterations {
-                            Iterations::Infinite => {
+                        Iterations::Exact(times_left) => {
+                            if times_left > 1 {
                                 let new_rescheduled_at =
                                     if let Some(rescheduled_at) = task.rescheduled_at {
-                                        rescheduled_at + interval
+                                        rescheduled_at + task.scheduling_interval.duration_nano
                                     } else {
-                                        task.scheduled_at + interval
+                                        task.scheduled_at + task.scheduling_interval.duration_nano
                                     };
 
                                 task.rescheduled_at = Some(new_rescheduled_at);
 
                                 self.queue.push(TaskTimestamp {
                                     task_id,
-                                    timestamp: new_rescheduled_at + interval,
+                                    timestamp: new_rescheduled_at
+                                        + task.scheduling_interval.duration_nano,
                                 });
+
+                                task.scheduling_interval.iterations =
+                                    Iterations::Exact(times_left - 1);
+                            } else {
+                                should_remove = true;
                             }
-                            Iterations::Exact(times_left) => {
-                                if *times_left > 1 {
-                                    let new_rescheduled_at =
-                                        if let Some(rescheduled_at) = task.rescheduled_at {
-                                            rescheduled_at + interval
-                                        } else {
-                                            task.scheduled_at + interval
-                                        };
-
-                                    task.rescheduled_at = Some(new_rescheduled_at);
-
-                                    self.queue.push(TaskTimestamp {
-                                        task_id,
-                                        timestamp: new_rescheduled_at + interval,
-                                    });
-
-                                    task.scheduling_type = SchedulingType::Interval((
-                                        *interval,
-                                        Iterations::Exact(times_left - 1),
-                                    ));
-                                } else {
-                                    should_remove = true;
-                                }
-                            }
-                        },
+                        }
                     };
 
                     tasks.push(task.clone());
@@ -156,13 +155,13 @@ mod tests {
     use union_utils::{random_principal_test, RemoteCallEndpoint};
 
     use crate::task_scheduler::TaskScheduler;
-    use crate::types::{Iterations, SchedulingType};
+    use crate::types::{Iterations, SchedulingInterval};
 
     #[test]
     fn queue_works_fine() {
         let mut scheduler = TaskScheduler::default();
 
-        let task_1 = scheduler
+        let task_id_1 = scheduler
             .enqueue(
                 RemoteCallEndpoint {
                     canister_id: random_principal_test(),
@@ -170,13 +169,16 @@ mod tests {
                 },
                 (10, "abc"),
                 0,
-                SchedulingType::Timeout(10),
+                SchedulingInterval {
+                    duration_nano: 10,
+                    iterations: Iterations::Exact(1),
+                },
                 0,
             )
             .ok()
             .unwrap();
 
-        let task_2 = scheduler
+        let task_id_2 = scheduler
             .enqueue(
                 RemoteCallEndpoint {
                     canister_id: random_principal_test(),
@@ -184,13 +186,16 @@ mod tests {
                 },
                 (10, "abc"),
                 0,
-                SchedulingType::Interval((10, Iterations::Infinite)),
+                SchedulingInterval {
+                    duration_nano: 10,
+                    iterations: Iterations::Infinite,
+                },
                 0,
             )
             .ok()
             .unwrap();
 
-        let task_3 = scheduler
+        let task_id_3 = scheduler
             .enqueue(
                 RemoteCallEndpoint {
                     canister_id: random_principal_test(),
@@ -198,7 +203,10 @@ mod tests {
                 },
                 (),
                 0,
-                SchedulingType::Interval((20, Iterations::Exact(2))),
+                SchedulingInterval {
+                    duration_nano: 20,
+                    iterations: Iterations::Exact(2),
+                },
                 0,
             )
             .ok()
@@ -219,11 +227,11 @@ mod tests {
             "At timestamp 10 there should be 2 tasks"
         );
         assert!(
-            tasks_1_2.iter().any(|t| t.id == task_1.id),
+            tasks_1_2.iter().any(|t| t.id == task_id_1),
             "Should contain task 1"
         );
         assert!(
-            tasks_1_2.iter().any(|t| t.id == task_2.id),
+            tasks_1_2.iter().any(|t| t.id == task_id_2),
             "Should contain task 2"
         );
 
@@ -240,11 +248,11 @@ mod tests {
             "At timestamp 20 there should be 2 tasks"
         );
         assert!(
-            tasks_2_3.iter().any(|t| t.id == task_2.id),
+            tasks_2_3.iter().any(|t| t.id == task_id_2),
             "Should contain task 2"
         );
         assert!(
-            tasks_2_3.iter().any(|t| t.id == task_3.id),
+            tasks_2_3.iter().any(|t| t.id == task_id_3),
             "Should contain task 3"
         );
 
@@ -254,7 +262,7 @@ mod tests {
             1,
             "There should be a single task at timestamp 30"
         );
-        assert_eq!(tasks_2[0].id, task_2.id, "Should contain task 2");
+        assert_eq!(tasks_2[0].id, task_id_2, "Should contain task 2");
 
         let tasks_2_3 = scheduler.iterate(42);
         assert_eq!(
@@ -263,11 +271,11 @@ mod tests {
             "At timestamp 40 there should be 2 tasks"
         );
         assert!(
-            tasks_2_3.iter().any(|t| t.id == task_2.id),
+            tasks_2_3.iter().any(|t| t.id == task_id_2),
             "Should contain task 2"
         );
         assert!(
-            tasks_2_3.iter().any(|t| t.id == task_3.id),
+            tasks_2_3.iter().any(|t| t.id == task_id_3),
             "Should contain task 3"
         );
 
@@ -277,7 +285,7 @@ mod tests {
             1,
             "There should be a single task at timestamp 60"
         );
-        assert_eq!(tasks_2[0].id, task_2.id, "Should contain task 2");
+        assert_eq!(tasks_2[0].id, task_id_2, "Should contain task 2");
 
         let tasks_2 = scheduler.iterate(60);
         assert_eq!(
@@ -285,6 +293,6 @@ mod tests {
             1,
             "There should be a single task at timestamp 60"
         );
-        assert_eq!(tasks_2[0].id, task_2.id, "Should contain task 2");
+        assert_eq!(tasks_2[0].id, task_id_2, "Should contain task 2");
     }
 }
