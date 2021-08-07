@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "src/ic-cron",
+    "src/ic-cron-test"
+]

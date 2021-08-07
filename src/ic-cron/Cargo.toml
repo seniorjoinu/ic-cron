@@ -1,0 +1,13 @@
+[package]
+name = "ic-cron"
+version = "0.1.0"
+authors = ["Александр Втюрин <senior.joinu@gmail.com>"]
+edition = "2018"
+description = "Make your ic canister pro-active"
+license = "MIT"
+
+[dependencies]
+ic-cdk = "0.3.1"
+ic-cdk-macros = "0.3.1"
+serde = "1.0.126"
+union-utils = "0.1.0"
