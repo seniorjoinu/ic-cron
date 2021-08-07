@@ -19,14 +19,14 @@ macro_rules! implement_cron {
             endpoint: union_utils::RemoteCallEndpoint,
             args: Tuple,
             cycles: u64,
-            scheduling_type: ic_cron::types::SchedulingType,
-        ) -> ic_cdk::export::candid::Result<ic_cron::types::Task> {
+            scheduling_interval: ic_cron::types::SchedulingInterval,
+        ) -> ic_cdk::export::candid::Result<ic_cron::types::TaskId> {
             let cron = get_cron_state();
             let task = cron.scheduler.enqueue(
                 endpoint,
                 args,
                 cycles,
-                scheduling_type,
+                scheduling_interval,
                 ic_cdk::api::time(),
             );
 

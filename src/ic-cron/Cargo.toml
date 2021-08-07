@@ -1,6 +1,6 @@
 [package]
 name = "ic-cron"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Александр Втюрин <senior.joinu@gmail.com>"]
 edition = "2018"
 description = "Make your ic canister pro-active"
