@@ -53,6 +53,8 @@ macro_rules! implement_cron {
         #[allow(unused_must_use)]
         #[ic_cdk_macros::update]
         fn _cron_pulse() {
+            union_utils::log("_cron_pulse()");
+
             let cron = get_cron_state();
 
             cron.scheduler

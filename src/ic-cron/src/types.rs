@@ -2,9 +2,7 @@ use std::cmp::{max, min, Ordering};
 use std::collections::BinaryHeap;
 
 use ic_cdk::export::candid::utils::ArgumentEncoder;
-use ic_cdk::export::candid::{
-    encode_args, CandidType, Deserialize, Principal, Result as CandidResult,
-};
+use ic_cdk::export::candid::{encode_args, CandidType, Deserialize, Result as CandidResult};
 use union_utils::{RemoteCallEndpoint, RemoteCallPayload};
 
 pub type TaskId = u64;

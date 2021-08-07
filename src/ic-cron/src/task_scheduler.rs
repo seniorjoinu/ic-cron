@@ -2,7 +2,7 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
 use ic_cdk::export::candid::utils::ArgumentEncoder;
-use ic_cdk::export::candid::{Principal, Result as CandidResult};
+use ic_cdk::export::candid::Result as CandidResult;
 use union_utils::RemoteCallEndpoint;
 
 use crate::types::{
