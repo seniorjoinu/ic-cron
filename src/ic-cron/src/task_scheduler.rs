@@ -126,22 +126,27 @@ impl TaskScheduler {
         tasks
     }
 
+    #[inline(always)]
     pub fn dequeue(&mut self, task_id: TaskId) -> Option<Task> {
         self.tasks.remove(&task_id)
     }
 
+    #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.queue.is_empty()
     }
 
+    #[inline(always)]
     pub fn get_task_by_id(&self, task_id: &TaskId) -> Option<Task> {
         self.tasks.get(task_id).cloned()
     }
 
+    #[inline(always)]
     pub fn get_tasks(&self) -> Vec<Task> {
         self.tasks.values().cloned().collect()
     }
 
+    #[inline(always)]
     fn generate_task_id(&mut self) -> TaskId {
         let res = self.task_id_counter;
         self.task_id_counter += 1;

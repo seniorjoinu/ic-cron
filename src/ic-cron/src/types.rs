@@ -128,6 +128,7 @@ impl Ord for TaskTimestamp {
 pub struct TaskExecutionQueue(BinaryHeap<TaskTimestamp>);
 
 impl TaskExecutionQueue {
+    #[inline(always)]
     pub fn push(&mut self, task: TaskTimestamp) {
         self.0.push(task);
     }
@@ -152,10 +153,12 @@ impl TaskExecutionQueue {
         result
     }
 
+    #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
+    #[inline(always)]
     pub fn len(&self) -> usize {
         self.0.len()
     }

@@ -8,6 +8,7 @@ pub mod task_scheduler;
 pub mod types;
 
 #[allow(unused_must_use)]
+#[inline(always)]
 pub fn exec_cron_task(task: Task) {
     call_raw(
         task.payload.endpoint.canister_id,

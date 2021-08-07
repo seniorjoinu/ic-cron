@@ -3,6 +3,7 @@ macro_rules! implement_cron {
     () => {
         static mut CRON: Option<ic_cron::Cron> = None;
 
+        #[inline(always)]
         pub fn get_cron_state() -> &'static mut ic_cron::Cron {
             unsafe {
                 match CRON.as_mut() {
@@ -39,11 +40,13 @@ macro_rules! implement_cron {
             task
         }
 
+        #[inline(always)]
         pub fn cron_dequeue(task_id: ic_cron::types::TaskId) -> Option<ic_cron::types::Task> {
             get_cron_state().scheduler.dequeue(task_id)
         }
 
         #[allow(unused_must_use)]
+        #[inline(always)]
         pub fn _call_cron_pulse() {
             if get_cron_state().is_running {
                 ic_cdk::call::<(), ()>(ic_cdk::id(), "_cron_pulse", ());
