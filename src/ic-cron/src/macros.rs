@@ -49,14 +49,15 @@ macro_rules! implement_cron {
         #[inline(always)]
         pub fn _call_cron_pulse() {
             if get_cron_state().is_running {
-                ic_cdk::call::<(), ()>(ic_cdk::id(), "_cron_pulse", ());
-            }
+                ic_cdk::block_on(async {
+                    ic_cdk::call::<(), ()>(ic_cdk::id(), "_cron_pulse", ()).await;
+                });
+            };
         }
 
-        #[allow(unused_must_use)]
         #[ic_cdk_macros::update]
         fn _cron_pulse() {
-            union_utils::log("_cron_pulse()");
+            union_utils::log("ic_cron._cron_pulse()");
 
             let cron = get_cron_state();
 
