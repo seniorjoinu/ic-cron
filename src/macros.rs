@@ -1,15 +1,15 @@
 #[macro_export]
 macro_rules! implement_cron {
     () => {
-        static mut CRON: Option<ic_cron::Cron> = None;
+        static mut CRON: Option<ic_cron::types::Cron> = None;
 
         #[inline(always)]
-        pub fn get_cron_state() -> &'static mut ic_cron::Cron {
+        pub fn get_cron_state() -> &'static mut ic_cron::types::Cron {
             unsafe {
                 match CRON.as_mut() {
                     Some(cron) => cron,
                     None => {
-                        CRON = Some(ic_cron::Cron::default());
+                        CRON = Some(ic_cron::types::Cron::default());
                         get_cron_state()
                     }
                 }
@@ -41,7 +41,9 @@ macro_rules! implement_cron {
         }
 
         #[inline(always)]
-        pub fn cron_dequeue(task_id: ic_cron::types::TaskId) -> Option<ic_cron::types::Task> {
+        pub fn cron_dequeue(
+            task_id: ic_cron::types::TaskId,
+        ) -> Option<ic_cron::types::ScheduledTask> {
             get_cron_state().scheduler.dequeue(task_id)
         }
 
@@ -64,7 +66,7 @@ macro_rules! implement_cron {
             cron.scheduler
                 .iterate(ic_cdk::api::time())
                 .into_iter()
-                .for_each(ic_cron::exec_cron_task);
+                .for_each(_cron_task_handler);
 
             if cron.scheduler.is_empty() {
                 cron.is_running = false;
@@ -73,4 +75,20 @@ macro_rules! implement_cron {
             _call_cron_pulse();
         }
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use crate as ic_cron;
+    use crate::implement_cron;
+    use crate::types::ScheduledTask;
+
+    fn _cron_task_handler(task: ScheduledTask) {
+        match task.get_kind() {
+            0u8 => {}
+            _ => {}
+        }
+    }
+
+    implement_cron!();
 }

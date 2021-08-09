@@ -2,10 +2,20 @@ use std::cmp::{max, min, Ordering};
 use std::collections::BinaryHeap;
 
 use ic_cdk::export::candid::utils::ArgumentEncoder;
-use ic_cdk::export::candid::{encode_args, CandidType, Deserialize, Result as CandidResult};
+use ic_cdk::export::candid::{
+    decode_one, encode_args, encode_one, CandidType, Deserialize, Result as CandidResult,
+};
 use union_utils::{RemoteCallEndpoint, RemoteCallPayload};
 
+use crate::task_scheduler::TaskScheduler;
+
 pub type TaskId = u64;
+
+#[derive(Clone, CandidType, Deserialize)]
+pub struct Task {
+    pub kind: u8,
+    pub data: Vec<u8>,
+}
 
 #[derive(Clone, CandidType, Deserialize)]
 pub enum Iterations {
@@ -20,37 +30,46 @@ pub struct SchedulingInterval {
 }
 
 #[derive(Clone, CandidType, Deserialize)]
-pub struct Task {
+pub struct ScheduledTask {
     pub id: TaskId,
-    pub payload: RemoteCallPayload,
+    pub payload: Task,
     pub scheduled_at: u64,
     pub rescheduled_at: Option<u64>,
     pub scheduling_interval: SchedulingInterval,
 }
 
-impl Task {
-    pub fn new<Tuple: ArgumentEncoder>(
+impl ScheduledTask {
+    pub fn new<TaskPayload: CandidType>(
         id: TaskId,
-        endpoint: RemoteCallEndpoint,
-        args: Tuple,
-        cycles: u64,
+        kind: u8,
+        payload: TaskPayload,
         scheduled_at: u64,
         rescheduled_at: Option<u64>,
         scheduling_interval: SchedulingInterval,
     ) -> CandidResult<Self> {
-        let payload = RemoteCallPayload {
-            endpoint,
-            cycles,
-            args_raw: encode_args(args)?,
+        let task = Task {
+            kind,
+            data: encode_one(payload).unwrap(),
         };
 
         Ok(Self {
             id,
-            payload,
+            payload: task,
             scheduled_at,
             rescheduled_at,
             scheduling_interval,
         })
+    }
+
+    pub fn get_payload<'a, T>(&'a self) -> CandidResult<T>
+    where
+        T: Deserialize<'a> + CandidType,
+    {
+        decode_one(&self.payload.data)
+    }
+
+    pub fn get_kind(&self) -> u8 {
+        self.payload.kind
     }
 }
 
@@ -162,4 +181,10 @@ impl TaskExecutionQueue {
     pub fn len(&self) -> usize {
         self.0.len()
     }
+}
+
+#[derive(Default)]
+pub struct Cron {
+    pub is_running: bool,
+    pub scheduler: TaskScheduler,
 }

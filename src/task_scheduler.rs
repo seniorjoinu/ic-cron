@@ -6,12 +6,12 @@ use ic_cdk::export::candid::Result as CandidResult;
 use union_utils::RemoteCallEndpoint;
 
 use crate::types::{
-    Iterations, SchedulingInterval, Task, TaskExecutionQueue, TaskId, TaskTimestamp,
+    Iterations, ScheduledTask, SchedulingInterval, TaskExecutionQueue, TaskId, TaskTimestamp,
 };
 
 #[derive(Default)]
 pub struct TaskScheduler {
-    pub tasks: HashMap<TaskId, Task>,
+    pub tasks: HashMap<TaskId, ScheduledTask>,
     pub task_id_counter: TaskId,
     pub queue: TaskExecutionQueue,
 }
@@ -26,7 +26,7 @@ impl TaskScheduler {
         timestamp: u64,
     ) -> CandidResult<TaskId> {
         let id = self.generate_task_id();
-        let task = Task::new(
+        let task = ScheduledTask::new(
             id,
             endpoint,
             args,
@@ -56,7 +56,7 @@ impl TaskScheduler {
         Ok(id)
     }
 
-    pub fn iterate(&mut self, timestamp: u64) -> Vec<Task> {
+    pub fn iterate(&mut self, timestamp: u64) -> Vec<ScheduledTask> {
         let mut tasks = vec![];
 
         for task_id in self
@@ -127,7 +127,7 @@ impl TaskScheduler {
     }
 
     #[inline(always)]
-    pub fn dequeue(&mut self, task_id: TaskId) -> Option<Task> {
+    pub fn dequeue(&mut self, task_id: TaskId) -> Option<ScheduledTask> {
         self.tasks.remove(&task_id)
     }
 
@@ -137,12 +137,12 @@ impl TaskScheduler {
     }
 
     #[inline(always)]
-    pub fn get_task_by_id(&self, task_id: &TaskId) -> Option<Task> {
+    pub fn get_task_by_id(&self, task_id: &TaskId) -> Option<ScheduledTask> {
         self.tasks.get(task_id).cloned()
     }
 
     #[inline(always)]
-    pub fn get_tasks(&self) -> Vec<Task> {
+    pub fn get_tasks(&self) -> Vec<ScheduledTask> {
         self.tasks.values().cloned().collect()
     }
 
