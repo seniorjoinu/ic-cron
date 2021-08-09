@@ -16,9 +16,9 @@ macro_rules! implement_cron {
             }
         }
 
-        pub fn cron_enqueue<Tuple: ic_cdk::export::candid::utils::ArgumentEncoder>(
+        pub fn cron_enqueue<Payload: ic_cdk::export::candid::CandidType>(
             kind: u8,
-            payload: ic_cron::types::Task,
+            payload: Payload,
             scheduling_interval: ic_cron::types::SchedulingInterval,
         ) -> ic_cdk::export::candid::Result<ic_cron::types::TaskId> {
             let cron = get_cron_state();
