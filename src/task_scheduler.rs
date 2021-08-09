@@ -1,9 +1,7 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
-use ic_cdk::export::candid::utils::ArgumentEncoder;
-use ic_cdk::export::candid::Result as CandidResult;
-use union_utils::RemoteCallEndpoint;
+use ic_cdk::export::candid::{CandidType, Result as CandidResult};
 
 use crate::types::{
     Iterations, ScheduledTask, SchedulingInterval, TaskExecutionQueue, TaskId, TaskTimestamp,
@@ -17,24 +15,15 @@ pub struct TaskScheduler {
 }
 
 impl TaskScheduler {
-    pub fn enqueue<Tuple: ArgumentEncoder>(
+    pub fn enqueue<TaskPayload: CandidType>(
         &mut self,
-        endpoint: RemoteCallEndpoint,
-        args: Tuple,
-        cycles: u64,
+        kind: u8,
+        payload: TaskPayload,
         scheduling_interval: SchedulingInterval,
         timestamp: u64,
     ) -> CandidResult<TaskId> {
         let id = self.generate_task_id();
-        let task = ScheduledTask::new(
-            id,
-            endpoint,
-            args,
-            cycles,
-            timestamp,
-            None,
-            scheduling_interval,
-        )?;
+        let task = ScheduledTask::new(id, kind, payload, timestamp, None, scheduling_interval)?;
 
         match task.scheduling_interval.iterations {
             Iterations::Exact(times) => {
@@ -157,10 +146,16 @@ impl TaskScheduler {
 
 #[cfg(test)]
 mod tests {
+    use ic_cdk::export::candid::{CandidType, Deserialize};
     use union_utils::{random_principal_test, RemoteCallEndpoint};
 
     use crate::task_scheduler::TaskScheduler;
     use crate::types::{Iterations, SchedulingInterval};
+
+    #[derive(CandidType, Deserialize)]
+    pub struct TestPayload {
+        pub a: bool,
+    }
 
     #[test]
     fn queue_works_fine() {
@@ -168,12 +163,8 @@ mod tests {
 
         let task_id_1 = scheduler
             .enqueue(
-                RemoteCallEndpoint {
-                    canister_id: random_principal_test(),
-                    method_name: "test".into(),
-                },
-                (10, "abc"),
                 0,
+                TestPayload { a: true },
                 SchedulingInterval {
                     duration_nano: 10,
                     iterations: Iterations::Exact(1),
@@ -185,12 +176,8 @@ mod tests {
 
         let task_id_2 = scheduler
             .enqueue(
-                RemoteCallEndpoint {
-                    canister_id: random_principal_test(),
-                    method_name: "test".into(),
-                },
-                (10, "abc"),
-                0,
+                1,
+                TestPayload { a: true },
                 SchedulingInterval {
                     duration_nano: 10,
                     iterations: Iterations::Infinite,
@@ -202,12 +189,8 @@ mod tests {
 
         let task_id_3 = scheduler
             .enqueue(
-                RemoteCallEndpoint {
-                    canister_id: random_principal_test(),
-                    method_name: "test".into(),
-                },
-                (),
                 0,
+                TestPayload { a: false },
                 SchedulingInterval {
                     duration_nano: 20,
                     iterations: Iterations::Exact(2),

@@ -17,19 +17,14 @@ macro_rules! implement_cron {
         }
 
         pub fn cron_enqueue<Tuple: ic_cdk::export::candid::utils::ArgumentEncoder>(
-            endpoint: union_utils::RemoteCallEndpoint,
-            args: Tuple,
-            cycles: u64,
+            kind: u8,
+            payload: ic_cron::types::Task,
             scheduling_interval: ic_cron::types::SchedulingInterval,
         ) -> ic_cdk::export::candid::Result<ic_cron::types::TaskId> {
             let cron = get_cron_state();
-            let task = cron.scheduler.enqueue(
-                endpoint,
-                args,
-                cycles,
-                scheduling_interval,
-                ic_cdk::api::time(),
-            );
+            let task =
+                cron.scheduler
+                    .enqueue(kind, payload, scheduling_interval, ic_cdk::api::time());
 
             if !cron.is_running {
                 cron.is_running = true;
@@ -86,6 +81,7 @@ mod tests {
     fn _cron_task_handler(task: ScheduledTask) {
         match task.get_kind() {
             0u8 => {}
+            1u8 => {}
             _ => {}
         }
     }

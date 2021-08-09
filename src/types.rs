@@ -1,11 +1,9 @@
 use std::cmp::{max, min, Ordering};
 use std::collections::BinaryHeap;
 
-use ic_cdk::export::candid::utils::ArgumentEncoder;
 use ic_cdk::export::candid::{
-    decode_one, encode_args, encode_one, CandidType, Deserialize, Result as CandidResult,
+    decode_one, encode_one, CandidType, Deserialize, Result as CandidResult,
 };
-use union_utils::{RemoteCallEndpoint, RemoteCallPayload};
 
 use crate::task_scheduler::TaskScheduler;
 
