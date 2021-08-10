@@ -1,0 +1,6 @@
+service : {
+    "start_counter_1" : (nat64) -> (nat64);
+    "get_counter_1" : () -> (nat64);
+    "start_counter_2" : (nat64, nat64) -> (nat64);
+    "get_counter_2" : () -> (nat64);
+}

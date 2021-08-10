@@ -5,8 +5,6 @@ use ic_cdk::export::candid::{
     decode_one, encode_one, CandidType, Deserialize, Result as CandidResult,
 };
 
-use crate::task_scheduler::TaskScheduler;
-
 pub type TaskId = u64;
 
 #[derive(Clone, CandidType, Deserialize)]
@@ -179,10 +177,4 @@ impl TaskExecutionQueue {
     pub fn len(&self) -> usize {
         self.0.len()
     }
-}
-
-#[derive(Default)]
-pub struct Cron {
-    pub is_running: bool,
-    pub scheduler: TaskScheduler,
 }

@@ -1,15 +1,14 @@
 #[macro_export]
 macro_rules! implement_cron {
     () => {
-        static mut CRON: Option<ic_cron::types::Cron> = None;
+        static mut CRON: Option<ic_cron::task_scheduler::TaskScheduler> = None;
 
-        #[inline(always)]
-        pub fn get_cron_state() -> &'static mut ic_cron::types::Cron {
+        pub fn get_cron_state() -> &'static mut ic_cron::task_scheduler::TaskScheduler {
             unsafe {
                 match CRON.as_mut() {
                     Some(cron) => cron,
                     None => {
-                        CRON = Some(ic_cron::types::Cron::default());
+                        CRON = Some(ic_cron::task_scheduler::TaskScheduler::default());
                         get_cron_state()
                     }
                 }
@@ -22,29 +21,26 @@ macro_rules! implement_cron {
             scheduling_interval: ic_cron::types::SchedulingInterval,
         ) -> ic_cdk::export::candid::Result<ic_cron::types::TaskId> {
             let cron = get_cron_state();
-            let task =
-                cron.scheduler
-                    .enqueue(kind, payload, scheduling_interval, ic_cdk::api::time());
+
+            let id = cron.enqueue(kind, payload, scheduling_interval, ic_cdk::api::time())?;
 
             if !cron.is_running {
-                cron.is_running = true;
+                cron.try_start();
 
                 _call_cron_pulse();
             }
 
-            task
+            Ok(id)
         }
 
-        #[inline(always)]
         pub fn cron_dequeue(
             task_id: ic_cron::types::TaskId,
         ) -> Option<ic_cron::types::ScheduledTask> {
-            get_cron_state().scheduler.dequeue(task_id)
+            get_cron_state().dequeue(task_id)
         }
 
         #[allow(unused_must_use)]
-        #[inline(always)]
-        pub fn _call_cron_pulse() {
+        fn _call_cron_pulse() {
             if get_cron_state().is_running {
                 ic_cdk::block_on(async {
                     ic_cdk::call::<(), ()>(ic_cdk::id(), "_cron_pulse", ()).await;
@@ -56,15 +52,8 @@ macro_rules! implement_cron {
         fn _cron_pulse() {
             union_utils::log("ic_cron._cron_pulse()");
 
-            let cron = get_cron_state();
-
-            cron.scheduler
-                .iterate(ic_cdk::api::time())
-                .into_iter()
-                .for_each(_cron_task_handler);
-
-            if cron.scheduler.is_empty() {
-                cron.is_running = false;
+            for task in get_cron_state().iterate(ic_cdk::api::time()) {
+                _cron_task_handler(task);
             }
 
             _call_cron_pulse();

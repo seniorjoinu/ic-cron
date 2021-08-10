@@ -9,8 +9,11 @@ use crate::types::{
 
 #[derive(Default)]
 pub struct TaskScheduler {
+    pub is_running: bool,
+
     pub tasks: HashMap<TaskId, ScheduledTask>,
     pub task_id_counter: TaskId,
+
     pub queue: TaskExecutionQueue,
 }
 
@@ -41,6 +44,8 @@ impl TaskScheduler {
         };
 
         self.tasks.insert(id, task);
+
+        self.try_start();
 
         Ok(id)
     }
@@ -115,39 +120,59 @@ impl TaskScheduler {
         tasks
     }
 
-    #[inline(always)]
     pub fn dequeue(&mut self, task_id: TaskId) -> Option<ScheduledTask> {
-        self.tasks.remove(&task_id)
+        let task = self.tasks.remove(&task_id);
+
+        self.try_stop();
+
+        task
     }
 
-    #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.queue.is_empty()
     }
 
-    #[inline(always)]
     pub fn get_task_by_id(&self, task_id: &TaskId) -> Option<ScheduledTask> {
         self.tasks.get(task_id).cloned()
     }
 
-    #[inline(always)]
     pub fn get_tasks(&self) -> Vec<ScheduledTask> {
         self.tasks.values().cloned().collect()
     }
 
-    #[inline(always)]
     fn generate_task_id(&mut self) -> TaskId {
         let res = self.task_id_counter;
         self.task_id_counter += 1;
 
         res
     }
+
+    pub fn try_start(&mut self) -> bool {
+        if !self.is_running {
+            self.is_running = true;
+
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn try_stop(&mut self) -> bool {
+        if !self.is_running {
+            true
+        } else if self.tasks.is_empty() {
+            self.is_running = false;
+
+            true
+        } else {
+            false
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use ic_cdk::export::candid::{CandidType, Deserialize};
-    use union_utils::{random_principal_test, RemoteCallEndpoint};
 
     use crate::task_scheduler::TaskScheduler;
     use crate::types::{Iterations, SchedulingInterval};
@@ -158,7 +183,7 @@ mod tests {
     }
 
     #[test]
-    fn queue_works_fine() {
+    fn main_flow_works_fine() {
         let mut scheduler = TaskScheduler::default();
 
         let task_id_1 = scheduler
@@ -201,6 +226,7 @@ mod tests {
             .unwrap();
 
         assert!(!scheduler.is_empty(), "Scheduler is not empty");
+        assert!(scheduler.is_running, "Scheduler should run");
 
         let tasks_emp = scheduler.iterate(5);
         assert!(
@@ -282,5 +308,24 @@ mod tests {
             "There should be a single task at timestamp 60"
         );
         assert_eq!(tasks_2[0].id, task_id_2, "Should contain task 2");
+
+        scheduler.dequeue(task_id_2).unwrap();
+
+        assert!(!scheduler.is_running, "Scheduler should stop");
+
+        scheduler
+            .enqueue(
+                0,
+                TestPayload { a: true },
+                SchedulingInterval {
+                    duration_nano: 10,
+                    iterations: Iterations::Exact(1),
+                },
+                0,
+            )
+            .ok()
+            .unwrap();
+
+        assert!(scheduler.is_running, "Scheduler should start again");
     }
 }

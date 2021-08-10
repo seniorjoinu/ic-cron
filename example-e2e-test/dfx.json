@@ -1,0 +1,23 @@
+{
+  "canisters": {
+    "ic-cron-example": {
+      "build": "./buildscripts/ic-cron-example.sh",
+      "candid": "../example/can.did",
+      "wasm": "../example/target/wasm32-unknown-unknown/release/ic-cron-example-opt.wasm",
+      "type": "custom"
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": ""
+    }
+  },
+  "dfx": "0.7.2",
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral"
+    }
+  },
+  "version": 1
+}
