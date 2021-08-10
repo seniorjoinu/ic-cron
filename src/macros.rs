@@ -82,7 +82,7 @@ macro_rules! u8_enum {
             $($(#[$vmeta])* $vname $(= $val)?,)*
         }
 
-        impl std::convert::TryFrom<u8> for MyEnum {
+        impl std::convert::TryFrom<u8> for $name {
             type Error = ();
 
             fn try_from(v: u8) -> Result<Self, Self::Error> {
