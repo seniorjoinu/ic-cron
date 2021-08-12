@@ -91,8 +91,8 @@ I strongly suggest you to visit all of them for better understanding.
 
 ### How many cycles does it consume?
 
-I did not run any benchmarking at this moment, but it is pretty efficient. Simple math says it should add around **
-$2/mo** overhead considering your canister always having a scheduled task in queue. If the scheduling is eventual (
+I did not run any benchmarking at this moment, but it is pretty efficient. Simple math says it should add around **$2/mo** 
+overhead considering your canister always having a scheduled task in queue. If the scheduling is eventual (
 sometimes you have a pending task, sometimes you don't) - it should consume even less.
 
 > Q: Does complexity of my tasks adds another overhead to cycles consumption?
