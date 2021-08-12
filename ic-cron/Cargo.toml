@@ -6,7 +6,7 @@ edition = "2018"
 description = "Makes your IC canister proactive"
 license = "MIT"
 readme = "../README.md"
-keywords = ["dfinity", "internet computer", "ic", "cron"]
+keywords = ["dfinity", "internet-computer", "ic", "cron"]
 
 [dependencies]
 ic-cdk = "0.3.1"
