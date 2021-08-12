@@ -69,7 +69,7 @@ cron_enqueue(
     // set a task kind so later you could decide how to handle it's execution
     TaskKind::SendGoodMorning as u8,
     // set a task payload - any CandidType is supported, so custom types would also work fine
-    String::from("sweety"), 
+    String::from("sweetie"), 
     // set a scheduling interval (how often and how many times to execute)
     ic_cron::types::SchedulingInterval {
         1_000_000_000 * 10, // each 10 seconds
