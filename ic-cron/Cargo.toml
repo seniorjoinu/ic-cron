@@ -1,13 +1,15 @@
 [package]
 name = "ic-cron"
-version = "0.2.4"
+version = "0.2.5"
 authors = ["Александр Втюрин <senior.joinu@gmail.com>"]
 edition = "2018"
-description = "Makes your IC canister pro-active"
+description = "Makes your IC canister proactive"
 license = "MIT"
+readme = "../README.md"
+keywords = ["dfinity", "internet computer", "ic", "cron"]
 
 [dependencies]
 ic-cdk = "0.3.1"
 ic-cdk-macros = "0.3.1"
 serde = "1.0.126"
-union-utils = "0.1.1"
+union-utils = "0.1.2"

@@ -1,6 +1,6 @@
-### E2e tests for iCert
+### E2E test for ic-cron
 
-* `yarn install`
-* `dfx start` in a separate terminal
-* `yarn deploy`
-* `yarn test`
+* `yarn install` - install dependencies
+* `yarn start` - start a replica in a separate terminal
+* `yarn test` - start the test
+* observe replicas logs
