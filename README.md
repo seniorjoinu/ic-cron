@@ -113,6 +113,9 @@ library, so it will handle canister upgrades gracefully.
 If you really want this functionality right now, you may try to serialize the state manually using `get_cron_state()`
 function.
 
+Also it works bad when you schedule a task with an interval less than IC's block time (~2s). Make sure you set 
+`duration_nano` in `scheduling_interval` to at least 3s.
+
 ## How does it work?
 
 It is pretty simple. It abuses the IC's messaging mechanics so your canister starts sending a wake-up message to itself.
