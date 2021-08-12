@@ -119,8 +119,8 @@ Also it works bad when you schedule a task with an interval less than IC's block
 ## How does it work?
 
 It is pretty simple. It abuses the IC's messaging mechanics so your canister starts sending a wake-up message to itself.
-Once this message is received, it checks a list of tasks if there are any of them which could be executed at this exact
-moment. If there are some, it passes them to the `_cron_task_handler()` function one by one, and then sends the special
+Once this message is received, it checks if any of them could be executed at this exact moment. If there are some, 
+it passes them to the `_cron_task_handler()` function one by one, and then sends the special
 message once again. If no more enqueued tasks left, it stops sending the message. Once a new task is enqueued, it starts
 to send the message again.
 
