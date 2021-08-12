@@ -173,7 +173,7 @@ Helper macro which will automatically derive `TryInto<u8>` for your enum.
 ### get_cron_state()
 
 Returns an object which can be used to observe scheduler's state and modify it. Mostly intended for advanced users who
-want to implement custom logic on top of `ic-cron`. See the [source code](./ic-cron/src/task_scheduler.rs) for further
+want to extend `ic-cron`. See the [source code](./ic-cron/src/task_scheduler.rs) for further
 info.
 
 ## Candid
