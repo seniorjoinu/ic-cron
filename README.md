@@ -78,17 +78,6 @@ cron_enqueue(
 );
 ```
 
-### How this repository is organized
-
-There are three directories:
-
-* [ic-cron](./ic-cron) - the library code itself
-* [example](./example) - example auto-counter canister which can help you understand how to use this library in your
-  project
-* [example-e2e-test](./example-e2e-test) - ts-mocha test that proves it is all real
-
-I strongly suggest you to visit all of them for better understanding.
-
 ### How many cycles does it consume?
 
 I did not run any benchmarking at this moment, but it is pretty efficient. Simple math says it should add around **$2/mo** 
@@ -136,7 +125,7 @@ This macro will implement all the functions you will use: `get_cron_state()`, `c
 as a new `#[update]` endpoint for your canister - `_cron_pulse()`, on which your canister will send the wake-up message.
 
 Basically this macros implements an inheritance pattern. Just like in a regular object-oriented programming language.
-Check the [source code](./ic-cron/src/macros.rs) for further info.
+Check the [source code](ic-cron-rs/src/macros.rs) for further info.
 
 ### cron_enqueue()
 
@@ -173,8 +162,7 @@ Helper macro which will automatically derive `TryInto<u8>` for your enum.
 ### get_cron_state()
 
 Returns an object which can be used to observe scheduler's state and modify it. Mostly intended for advanced users who
-want to extend `ic-cron`. See the [source code](./ic-cron/src/task_scheduler.rs) for further
-info.
+want to extend `ic-cron`. See the [source code](ic-cron-rs/src/task_scheduler.rs) for further info.
 
 ## Candid
 
