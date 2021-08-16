@@ -102,8 +102,8 @@ library, so it will handle canister upgrades gracefully.
 If you really want this functionality right now, you may try to serialize the state manually using `get_cron_state()`
 function.
 
-Also it works bad when you schedule a task with an interval less than IC's block time (~2s). Make sure you set 
-`duration_nano` in `scheduling_interval` to at least 3s.
+Since it can't pulse faster than the consensus ticks, it has an error of ~2s. So make sure you're not using a
+`duration_nano` interval less than 3s, otherwise it won't work as expected.
 
 ## How does it work?
 

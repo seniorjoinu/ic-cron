@@ -37,7 +37,7 @@ fn start_counter_1(duration_nano: u64) -> TaskId {
 
     let res = cron_enqueue(
         CronTaskKind::One as u8,
-        String::from("Task one"),
+        String::from("Hello from task 1!"),
         SchedulingInterval {
             duration_nano,
             iterations: Iterations::Infinite,
