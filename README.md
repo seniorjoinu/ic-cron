@@ -26,7 +26,7 @@ And it is just a rust library.
 # Cargo.toml
 
 [dependencies]
-ic-cron = "0.2.5"
+ic-cron = "0.2.8"
 ```
 
 ### Usage
