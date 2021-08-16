@@ -43,7 +43,9 @@ macro_rules! implement_cron {
         fn _call_cron_pulse() {
             if get_cron_state().is_running {
                 ic_cdk::block_on(async {
-                    ic_cdk::call::<(), ()>(ic_cdk::id(), "_cron_pulse", ()).await;
+                    ic_cdk::call::<(), ()>(ic_cdk::id(), "_cron_pulse", ())
+                        .await
+                        .unwrap();
                 });
             };
         }
