@@ -45,8 +45,6 @@ impl TaskScheduler {
 
         self.tasks.insert(id, task);
 
-        self.try_start();
-
         Ok(id)
     }
 
@@ -116,6 +114,8 @@ impl TaskScheduler {
                 self.tasks.remove(&task_id);
             }
         }
+
+        self.try_stop();
 
         tasks
     }

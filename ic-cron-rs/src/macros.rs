@@ -52,8 +52,6 @@ macro_rules! implement_cron {
 
         #[ic_cdk_macros::update]
         fn _cron_pulse() {
-            union_utils::log("ic_cron._cron_pulse()");
-
             for task in get_cron_state().iterate(ic_cdk::api::time()) {
                 _cron_task_handler(task);
             }
