@@ -27,6 +27,8 @@ u8_enum! {
 
 #[update]
 fn start_counter_1(duration_nano: u64) -> TaskId {
+    log("Start counter 1");
+
     let state = get_state();
 
     if state.counter_1_started {
@@ -54,6 +56,8 @@ fn get_counter_1() -> u64 {
 
 #[update]
 fn start_counter_2(duration_nano: u64, step: u64) -> TaskId {
+    log("Start counter 1");
+
     let state = get_state();
 
     if state.counter_2_started {
@@ -88,11 +92,13 @@ fn _cron_task_handler(task: ScheduledTask) {
         Ok(CronTaskKind::One) => {
             let message = task.get_payload::<String>().unwrap();
 
-            get_state().counter_1 += 1;
+            log(format!("Task One executed: {}", message.as_str()).as_str());
 
-            log(message.as_str());
+            get_state().counter_1 += 1;
         }
         Ok(CronTaskKind::Two) => {
+            log("Task Two executed");
+
             let step = task.get_payload::<u64>().unwrap();
 
             get_state().counter_2 += step;

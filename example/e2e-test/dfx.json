@@ -1,9 +1,9 @@
 {
   "canisters": {
     "ic-cron-example": {
-      "build": "./build.sh",
-      "candid": "./can.did",
-      "wasm": "./target/wasm32-unknown-unknown/release/ic-cron-example-opt.wasm",
+      "build": "./buildscripts/ic-cron-example.sh",
+      "candid": "../automatic-counter-canister/can.did",
+      "wasm": "../automatic-counter-canister/target/wasm32-unknown-unknown/release/ic-cron-example-opt.wasm",
       "type": "custom"
     }
   },
@@ -12,7 +12,7 @@
       "packtool": ""
     }
   },
-  "dfx": "0.7.2",
+  "dfx": "0.7.0",
   "networks": {
     "local": {
       "bind": "127.0.0.1:8000",

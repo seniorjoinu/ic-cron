@@ -1,8 +1,6 @@
-## IC Cron example
+### IC Cron usage example
 
-This directory is the example project that demonstrates usage of `ic-cron` library.
+The example is an automatic counter canister, which can increment its value without user's trigger. It contains:
 
-Here we have a simple automatic counting canister, that have two independent counters each of which get incremented by a
-cron-scheduled task triggered by remote user.
-
-Execute the [e2e-test](../example-e2e-test) locally to see how it works. 
+* [canister itself](./automatic-counter-canister)
+* [ts-mocha e2e test](./e2e-test)
