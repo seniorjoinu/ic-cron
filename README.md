@@ -108,7 +108,7 @@ Since it can't pulse faster than the consensus ticks, it has an error of ~2s. So
 ## How does it work?
 
 It is pretty simple. It abuses the IC's messaging mechanics so your canister starts sending a wake-up message to itself.
-Once this message is received, it checks if any of them could be executed at this exact moment. If there are some, 
+Once this message is received, it checks if there are scheduled tasks which could be executed at this exact moment. If there are some, 
 it passes them to the `_cron_task_handler()` function one by one, and then sends the special
 message once again. If no more enqueued tasks left, it stops sending the message. Once a new task is enqueued, it starts
 to send the message again.
