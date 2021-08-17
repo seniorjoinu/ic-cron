@@ -72,18 +72,6 @@ cron_enqueue(
 
 Since this library is just a fancy task queue, there is no significant overhead in terms of cycles.
 
-## Limitations
-
-Right now `ic-cron` doesn't support canister upgrades, so all your queued tasks will be lost. This is due to a
-limitation in `ic-cdk`, which doesn't support multiple stable variables at this moment. Once they do, I'll update this
-library, so it will handle canister upgrades gracefully.
-
-If you really want this functionality right now, you may try to serialize the state manually using `get_cron_state()`
-function.
-
-Since it can't pulse faster than the consensus ticks, it has an error of ~2s. So make sure you're not using a
-`duration_nano` interval less than 3s, otherwise it won't work as expected.
-
 ## How does it work?
 
 This library uses built-in canister heartbeat functionality. Each time you enqueue a task it gets added to the task
@@ -93,6 +81,17 @@ time `canister_heartbeat` function is called, you have to call `cron_ready_tasks
 over the task queue and pops tasks which scheduled execution timestamp is <= current timestamp. Rescheduled tasks get
 their next execution timestamp relative to their previous planned execution timestamp - this way the scheduler
 compensates an error caused by unstable consensus intervals.
+
+## Limitations
+
+1. Right now `ic-cron` doesn't support canister upgrades, so all your queued tasks will be lost. This is due to a
+limitation in `ic-cdk`, which doesn't support multiple stable variables at this moment. Once they do, I'll update this
+library, so it will handle canister upgrades gracefully.
+If you really want this functionality right now, you may try to serialize the state manually using `get_cron_state()`
+function.
+
+2. Since `ic-cron` can't pulse faster than the consensus ticks, it has an error of ~2s. So make sure you're not using a
+`duration_nano` interval less than 3s, otherwise it won't work as expected.
 
 ## API
 

@@ -6,8 +6,8 @@ This directory contains tests for automatic counter canister located at [example
 
 * `rust`
 * `wasm32-unknown-unknown` target
-* `dfx 0.8.0`
-* `ic-cdk-optimizer`
+* `dfx 0.7.2`
+* `ic-cdk-optimizer` (`cargo install --locked ic-cdk-optimizer`)
 
 #### Local development
 
