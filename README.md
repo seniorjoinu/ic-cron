@@ -8,6 +8,10 @@ The IC provides built-in "heartbeat" functionality which is basically a special 
 consensus ticks. But this is not enough for a comprehensive task scheduling - you still have to implement scheduling
 logic by yourself. This rust library does exactly that.
 
+Moreover, this library can help optimize scenarios when your canister sends a lot of messages, when there are more than
+one message per single recipient. In that case you could, instead of sending them all immediately, store them in some
+buffer and schedule an `ic-cron` task to batch-send them, once the task is executed.
+
 ### Installation
 
 ```toml
