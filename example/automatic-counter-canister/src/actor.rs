@@ -3,9 +3,10 @@ use std::convert::TryInto;
 use ic_cdk::export::candid::export_service;
 use ic_cdk::trap;
 use ic_cdk_macros::{query, update};
-use ic_cron::types::{Iterations, ScheduledTask, SchedulingInterval, TaskId};
-use ic_cron::{implement_cron, u8_enum};
 use union_utils::log;
+
+use ic_cron::types::{Iterations, SchedulingInterval, TaskId};
+use ic_cron::{implement_cron, u8_enum};
 
 // ------------- MAIN LOGIC -------------------
 
@@ -87,23 +88,26 @@ fn get_counter_2() -> u64 {
 
 implement_cron!();
 
-fn _cron_task_handler(task: ScheduledTask) {
-    match task.get_kind().try_into() {
-        Ok(CronTaskKind::One) => {
-            let message = task.get_payload::<String>().unwrap();
+#[export_name = "canister_heartbeat"]
+fn heartbeat() {
+    for task in cron_ready_tasks() {
+        match task.get_kind().try_into() {
+            Ok(CronTaskKind::One) => {
+                let message = task.get_payload::<String>().unwrap();
 
-            log(format!("Task One executed: {}", message.as_str()).as_str());
+                log(format!("Task One executed: {}", message.as_str()).as_str());
 
-            get_state().counter_1 += 1;
+                get_state().counter_1 += 1;
+            }
+            Ok(CronTaskKind::Two) => {
+                log("Task Two executed");
+
+                let step = task.get_payload::<u64>().unwrap();
+
+                get_state().counter_2 += step;
+            }
+            Err(_) => log("Invalid cron task handler"),
         }
-        Ok(CronTaskKind::Two) => {
-            log("Task Two executed");
-
-            let step = task.get_payload::<u64>().unwrap();
-
-            get_state().counter_2 += step;
-        }
-        Err(_) => log("Invalid cron task handler"),
     }
 }
 

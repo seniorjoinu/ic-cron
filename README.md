@@ -1,24 +1,12 @@
 ## IC Cron
 
-Makes your IC canister proactive
+Task scheduler rust library for the Internet Computer
 
-### Abstract
+### Motivation
 
-Canisters are reactive by their nature - they only do something when they're asked by a client or another canister. But
-what if you need your canister to do something automatically after some time passes? For example, what if you want your
-canister to transfer some tokens on your behalf each month? Or maybe you want your canister to send you a "Good
-morning!"
-message through OpenChat each morning?
-
-The only way to achieve such a behaviour before was to introduce an off-chain component, that will wait the time you
-need and then call canister's functions you want. This component could be either an edge device (such as user's
-smartphone) or some centralized cloud instance like AWS.
-
-**But not anymore.** With `ic-cron` you can do all of this stuff completely on-chain for a reasonable price. No more
-centralized "clock-bots", no more complex Uniswap-like patterns when each user helps with recurrent task execution. Just
-schedule a task and your good to go.
-
-And it is just a rust library.
+The IC provides built-in "heartbeat" functionality which is basically a special function that gets executed each time
+consensus ticks. But this is not enough for a comprehensive task scheduling - you still have to implement scheduling
+logic by yourself. This rust library does exactly that.
 
 ### Installation
 
@@ -26,7 +14,7 @@ And it is just a rust library.
 # Cargo.toml
 
 [dependencies]
-ic-cron = "0.2.5"
+ic-cron = "0.3.0"
 ```
 
 ### Usage
@@ -44,21 +32,23 @@ ic_cron::u8_enum! {
     }
 }
 
-// define a task handler function
-// it will be automatically invoked each time a task is ready to be executed
-fn _cron_task_handler(task: ScheduledTask) {
-    match task.get_kind().try_into() {
-        Ok(TaskKind::SendGoodMorning) => {
-            let name = task.get_payload::<String>().unwrap();
-      
-            // will print "Good morning, sweetie!"      
-            say(format!("Good morning, {}!", name));
-        },
-        Ok(TaskKind::TransferTokens) => {
-            ...
-        },
-        Err(e) => trap(e),
-    };
+// in a canister heartbeat function get all tasks ready for execution at this exact moment and use it
+#[export_name = "canister_heartbeat"]
+fn heartbeat() {
+    for task in cron_ready_tasks() {
+        match task.get_kind().try_into() {
+            Ok(TaskKind::SendGoodMorning) => {
+                let name = task.get_payload::<String>().unwrap();
+          
+                // will print "Good morning, sweetie!"      
+                say(format!("Good morning, {}!", name));
+            },
+            Ok(TaskKind::TransferTokens) => {
+                ...
+            },
+            Err(e) => trap(e),
+        };   
+    }
 }
 
 ...
@@ -80,18 +70,7 @@ cron_enqueue(
 
 ### How many cycles does it consume?
 
-I did not run any benchmarking at this moment, but it is pretty efficient. Simple math says it should add around **$2/mo** 
-overhead considering your canister always having a scheduled task in queue. If the scheduling is eventual (sometimes you 
-have a pending task, sometimes you don't) - it should consume even less.
-
-> Q: Does complexity of my tasks adds another overhead to cycles consumption?
->
-> A: No! You only pay for what you've coded. No additional cycles are wasted.
-
-> Q: What if I have multiple canisters each of which needs this behaviour?
->
-> A: In this case you can encapsulate ic-cron into a single separate cron-canister and ask it to schedule
-> tasks for your other canisters.
+Since this library is just a fancy task queue, there is no significant overhead in terms of cycles.
 
 ## Limitations
 
@@ -107,13 +86,13 @@ Since it can't pulse faster than the consensus ticks, it has an error of ~2s. So
 
 ## How does it work?
 
-It is pretty simple. It abuses the IC's messaging mechanics so your canister starts sending a wake-up message to itself.
-Once this message is received, it checks if any of them could be executed at this exact moment. If there are some, 
-it passes them to the `_cron_task_handler()` function one by one, and then sends the special
-message once again. If no more enqueued tasks left, it stops sending the message. Once a new task is enqueued, it starts
-to send the message again.
-
-So, basically it uses a weird infinite loop to eventually wake the canister up to do some work.
+This library uses built-in canister heartbeat functionality. Each time you enqueue a task it gets added to the task
+queue. Tasks could be scheduled in different ways - they can be executed some exact number of times or infinitely. It is
+very similar to how you use `setTimeout()` and `setInterval()` in javascript, but more flexible. Each
+time `canister_heartbeat` function is called, you have to call `cron_ready_tasks()` function which efficiently iterates
+over the task queue and pops tasks which scheduled execution timestamp is <= current timestamp. Rescheduled tasks get
+their next execution timestamp relative to their previous planned execution timestamp - this way the scheduler
+compensates an error caused by unstable consensus intervals.
 
 ## API
 
@@ -121,15 +100,15 @@ See the [example](./example) project for better understanding.
 
 ### implement_cron!()
 
-This macro will implement all the functions you will use: `get_cron_state()`, `cron_enqueue()`, `cron_dequeue()` as well
-as a new `#[update]` endpoint for your canister - `_cron_pulse()`, on which your canister will send the wake-up message.
+This macro will implement all the functions you will use: `get_cron_state()`, `cron_enqueue()`, `cron_dequeue()`
+and `cron_ready_tasks()`.
 
 Basically this macros implements an inheritance pattern. Just like in a regular object-oriented programming language.
 Check the [source code](ic-cron-rs/src/macros.rs) for further info.
 
 ### cron_enqueue()
 
-Schedules a new task. Returns task id, which then can be used in `cron_dequeue()` to deschedule the task.
+Schedules a new task. Returns task id, which then can be used in `cron_dequeue()` to de-schedule the task.
 
 Params:
 
@@ -154,6 +133,14 @@ Params:
 Returns:
 
 * `Option<ScheduledTask>` - `Some(task)`, if the operation was a success; `None`, if there was no such task.
+
+### cron_ready_tasks()
+
+Returns a vec of tasks ready to be executed right now.
+
+Returns:
+
+* `Vec<ScheduledTask>` - vec of tasks to handle
 
 ### u8_enum!()
 

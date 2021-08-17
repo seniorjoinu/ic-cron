@@ -9,8 +9,6 @@ use crate::types::{
 
 #[derive(Default)]
 pub struct TaskScheduler {
-    pub is_running: bool,
-
     pub tasks: HashMap<TaskId, ScheduledTask>,
     pub task_id_counter: TaskId,
 
@@ -114,18 +112,12 @@ impl TaskScheduler {
                 self.tasks.remove(&task_id);
             }
         }
-
-        self.try_stop();
-
+        
         tasks
     }
 
     pub fn dequeue(&mut self, task_id: TaskId) -> Option<ScheduledTask> {
-        let task = self.tasks.remove(&task_id);
-
-        self.try_stop();
-
-        task
+        self.tasks.remove(&task_id)
     }
 
     pub fn is_empty(&self) -> bool {
@@ -145,28 +137,6 @@ impl TaskScheduler {
         self.task_id_counter += 1;
 
         res
-    }
-
-    pub fn try_start(&mut self) -> bool {
-        if !self.is_running {
-            self.is_running = true;
-
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn try_stop(&mut self) -> bool {
-        if !self.is_running {
-            true
-        } else if self.tasks.is_empty() {
-            self.is_running = false;
-
-            true
-        } else {
-            false
-        }
     }
 }
 
@@ -226,7 +196,6 @@ mod tests {
             .unwrap();
 
         assert!(!scheduler.is_empty(), "Scheduler is not empty");
-        assert!(scheduler.is_running, "Scheduler should run");
 
         let tasks_emp = scheduler.iterate(5);
         assert!(
@@ -311,8 +280,6 @@ mod tests {
 
         scheduler.dequeue(task_id_2).unwrap();
 
-        assert!(!scheduler.is_running, "Scheduler should stop");
-
         scheduler
             .enqueue(
                 0,
@@ -325,7 +292,5 @@ mod tests {
             )
             .ok()
             .unwrap();
-
-        assert!(scheduler.is_running, "Scheduler should start again");
     }
 }
