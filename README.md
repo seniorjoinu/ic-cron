@@ -93,18 +93,6 @@ have a pending task, sometimes you don't) - it should consume even less.
 > A: In this case you can encapsulate ic-cron into a single separate cron-canister and ask it to schedule
 > tasks for your other canisters.
 
-## Limitations
-
-Right now `ic-cron` doesn't support canister upgrades, so all your queued tasks will be lost. This is due to a
-limitation in `ic-cdk`, which doesn't support multiple stable variables at this moment. Once they do, I'll update this
-library, so it will handle canister upgrades gracefully.
-
-If you really want this functionality right now, you may try to serialize the state manually using `get_cron_state()`
-function.
-
-Since it can't pulse faster than the consensus ticks, it has an error of ~2s. So make sure you're not using a
-`duration_nano` interval less than 3s, otherwise it won't work as expected.
-
 ## How does it work?
 
 It is pretty simple. It abuses the IC's messaging mechanics so your canister starts sending a wake-up message to itself.
@@ -114,6 +102,17 @@ message once again. If no more enqueued tasks left, it stops sending the message
 to send the message again.
 
 So, basically it uses a weird infinite loop to eventually wake the canister up to do some work.
+
+## Limitations
+
+1. Right now `ic-cron` doesn't support canister upgrades, so all your queued tasks will be lost. This is due to a
+limitation in `ic-cdk`, which doesn't support multiple stable variables at this moment. Once they do, I'll update this
+library, so it will handle canister upgrades gracefully.
+If you really want this functionality right now, you may try to serialize the state manually using `get_cron_state()`
+function.
+
+2. Since `ic-cron` can't pulse faster than the consensus ticks, it has an error of ~2s. So make sure you're not using a
+`duration_nano` interval less than 3s, otherwise it won't work as expected.
 
 ## API
 
