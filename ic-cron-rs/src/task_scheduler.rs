@@ -112,7 +112,7 @@ impl TaskScheduler {
                 self.tasks.remove(&task_id);
             }
         }
-        
+
         tasks
     }
 

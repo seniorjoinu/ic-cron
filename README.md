@@ -19,7 +19,7 @@ block, per unique recipient.
 # Cargo.toml
 
 [dependencies]
-ic-cron = "0.3.0"
+ic-cron = "0.4"
 ```
 
 ### Usage
