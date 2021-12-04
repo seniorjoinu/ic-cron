@@ -38,7 +38,7 @@ ic_cron::u8_enum! {
 }
 
 // in a canister heartbeat function get all tasks ready for execution at this exact moment and use it
-#[export_name = "canister_heartbeat"]
+#[ic_cdk_macros::heartbeat]
 fn heartbeat() {
     for task in cron_ready_tasks() {
         match task.get_kind().try_into() {
