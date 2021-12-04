@@ -24,12 +24,6 @@ macro_rules! implement_cron {
 
             let id = cron.enqueue(kind, payload, scheduling_interval, ic_cdk::api::time())?;
 
-            if !cron.is_running {
-                cron.try_start();
-
-                _call_cron_pulse();
-            }
-
             Ok(id)
         }
 
@@ -39,24 +33,8 @@ macro_rules! implement_cron {
             get_cron_state().dequeue(task_id)
         }
 
-        #[allow(unused_must_use)]
-        fn _call_cron_pulse() {
-            if get_cron_state().is_running {
-                ic_cdk::block_on(async {
-                    ic_cdk::call::<(), ()>(ic_cdk::id(), "_cron_pulse", ())
-                        .await
-                        .unwrap();
-                });
-            };
-        }
-
-        #[ic_cdk_macros::update]
-        fn _cron_pulse() {
-            for task in get_cron_state().iterate(ic_cdk::api::time()) {
-                _cron_task_handler(task);
-            }
-
-            _call_cron_pulse();
+        pub fn cron_ready_tasks() -> Vec<ic_cron::types::ScheduledTask> {
+            get_cron_state().iterate(ic_cdk::api::time())
         }
     };
 }
@@ -88,15 +66,25 @@ macro_rules! u8_enum {
 mod tests {
     use crate as ic_cron;
     use crate::implement_cron;
-    use crate::types::ScheduledTask;
+    use core::convert::TryInto;
 
-    fn _cron_task_handler(task: ScheduledTask) {
-        match task.get_kind() {
-            0u8 => {}
-            1u8 => {}
-            _ => {}
+    implement_cron!();
+
+    u8_enum! {
+        pub enum HanlderKind {
+            First,
+            Second,
         }
     }
 
-    implement_cron!();
+    #[export_name = "canister_heartbeat"]
+    fn heartbeat() {
+        for task in cron_ready_tasks() {
+            match task.get_kind().try_into() {
+                Ok(HanlderKind::First) => {}
+                Ok(HanlderKind::Second) => {}
+                Err(_) => {}
+            }
+        }
+    }
 }

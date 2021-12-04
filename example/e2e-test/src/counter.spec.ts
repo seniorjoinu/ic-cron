@@ -1,17 +1,12 @@
 import {delay, getSecsNano, ISetup, setup} from "./utils";
 import {Ed25519KeyIdentity} from "@dfinity/identity";
 import {assert} from 'chai';
-import {deployExample} from "./deploy";
 
 describe('automatic counter', () => {
     let counter: ISetup;
 
     before(async () => {
-        await deployExample();
-
         counter = await setup(Ed25519KeyIdentity.generate());
-
-        await counter.agent.fetchRootKey();
     });
 
     // this test checks for canister 'ic-cron-example' to work nicely

@@ -1,10 +1,11 @@
-import {Actor, HttpAgent, Identity} from "@dfinity/agent";
+import {Actor, CanisterInstallMode, getManagementCanister, HttpAgent, Identity} from "@dfinity/agent";
 import fetch from 'node-fetch';
 import {exec} from 'child_process';
 import {expect} from "chai";
 
-import ICounterClient from 'dfx-type/ic-cron-example/ic-cron-example';
-
+import {_SERVICE as ICounterClient} from 'dfx-type/ic-cron-example/ic-cron-example';
+import {idlFactory} from 'dfx-idl/ic-cron-example/ic-cron-example';
+import * as fs from "fs";
 
 export interface ISetup {
     agent: HttpAgent;
@@ -12,6 +13,7 @@ export interface ISetup {
 }
 
 export async function setup(identity: Identity): Promise<ISetup> {
+
     const agent = new HttpAgent({
         host: 'http://localhost:8000/',
         // @ts-ignore
@@ -19,11 +21,22 @@ export async function setup(identity: Identity): Promise<ISetup> {
         identity
     });
 
-    const {canisterId, idlFactory} = await import('dfx/ic-cron-example/ic-cron-example');
+    await agent.fetchRootKey();
+
+    const managementCanister = getManagementCanister({agent});
+    const {canister_id} = await managementCanister.provisional_create_canister_with_cycles({amount: [], settings: []});
+    const wasm = fs.readFileSync('.dfx/local/canisters/ic-cron-example/ic-cron-example.wasm');
+
+    await managementCanister.install_code({
+        canister_id,
+        mode: { [CanisterInstallMode.Install]: null },
+        wasm_module: [...wasm],
+        arg: []
+    });
 
     const client: ICounterClient = Actor.createActor(idlFactory, {
         agent,
-        canisterId
+        canisterId: canister_id
     });
 
     return {

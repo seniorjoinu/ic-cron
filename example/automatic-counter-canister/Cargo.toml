@@ -9,8 +9,8 @@ crate-type = ["cdylib"]
 path = "src/actor.rs"
 
 [dependencies]
-ic-cdk = "0.3.1"
-ic-cdk-macros = "0.3.1"
+ic-cdk = "0.3"
+ic-cdk-macros = "0.3"
 serde = "1.0.126"
-ic-cron = "0.2.8"
-union-utils = "0.1.3"
+ic-cron = { path = "../../ic-cron-rs" }
+union-utils = "0.1.4"
