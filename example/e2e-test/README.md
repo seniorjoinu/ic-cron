@@ -13,5 +13,6 @@ This directory contains tests for automatic counter canister located at [example
 
 * `yarn install` - install dependencies
 * `yarn start` - start a replica in a separate terminal
+* `yarn build` - build wasm canister code and their ts-bindings
 * `yarn test` - start the test
 * observe replicas logs
