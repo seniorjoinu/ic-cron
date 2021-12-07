@@ -15,6 +15,8 @@ block, per unique recipient.
 
 ### Installation
 
+Make sure you're using `dfx 0.8.4` or higher.
+
 ```toml
 # Cargo.toml
 
