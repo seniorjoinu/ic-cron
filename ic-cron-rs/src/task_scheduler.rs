@@ -31,13 +31,13 @@ impl TaskScheduler {
                 if times > 0 {
                     self.queue.push(TaskTimestamp {
                         task_id: id,
-                        timestamp: timestamp + task.scheduling_interval.duration_nano,
+                        timestamp: timestamp + task.scheduling_interval.delay_nano,
                     })
                 }
             }
             Iterations::Infinite => self.queue.push(TaskTimestamp {
                 task_id: id,
-                timestamp: timestamp + task.scheduling_interval.duration_nano,
+                timestamp: timestamp + task.scheduling_interval.delay_nano,
             }),
         };
 
@@ -63,36 +63,54 @@ impl TaskScheduler {
 
                     match task.scheduling_interval.iterations {
                         Iterations::Infinite => {
-                            let new_rescheduled_at =
+                            let new_rescheduled_at = if task.delay_passed {
                                 if let Some(rescheduled_at) = task.rescheduled_at {
-                                    rescheduled_at + task.scheduling_interval.duration_nano
+                                    rescheduled_at + task.scheduling_interval.interval_nano
                                 } else {
-                                    task.scheduled_at + task.scheduling_interval.duration_nano
-                                };
+                                    task.scheduled_at + task.scheduling_interval.interval_nano
+                                }
+                            } else {
+                                task.delay_passed = true;
+
+                                if let Some(rescheduled_at) = task.rescheduled_at {
+                                    rescheduled_at + task.scheduling_interval.delay_nano
+                                } else {
+                                    task.scheduled_at + task.scheduling_interval.delay_nano
+                                }
+                            };
 
                             task.rescheduled_at = Some(new_rescheduled_at);
 
                             self.queue.push(TaskTimestamp {
                                 task_id,
                                 timestamp: new_rescheduled_at
-                                    + task.scheduling_interval.duration_nano,
+                                    + task.scheduling_interval.interval_nano,
                             });
                         }
                         Iterations::Exact(times_left) => {
                             if times_left > 1 {
-                                let new_rescheduled_at =
+                                let new_rescheduled_at = if task.delay_passed {
                                     if let Some(rescheduled_at) = task.rescheduled_at {
-                                        rescheduled_at + task.scheduling_interval.duration_nano
+                                        rescheduled_at + task.scheduling_interval.interval_nano
                                     } else {
-                                        task.scheduled_at + task.scheduling_interval.duration_nano
-                                    };
+                                        task.scheduled_at + task.scheduling_interval.interval_nano
+                                    }
+                                } else {
+                                    task.delay_passed = true;
+
+                                    if let Some(rescheduled_at) = task.rescheduled_at {
+                                        rescheduled_at + task.scheduling_interval.delay_nano
+                                    } else {
+                                        task.scheduled_at + task.scheduling_interval.delay_nano
+                                    }
+                                };
 
                                 task.rescheduled_at = Some(new_rescheduled_at);
 
                                 self.queue.push(TaskTimestamp {
                                     task_id,
                                     timestamp: new_rescheduled_at
-                                        + task.scheduling_interval.duration_nano,
+                                        + task.scheduling_interval.interval_nano,
                                 });
 
                                 task.scheduling_interval.iterations =
@@ -161,7 +179,8 @@ mod tests {
                 0,
                 TestPayload { a: true },
                 SchedulingInterval {
-                    duration_nano: 10,
+                    delay_nano: 10,
+                    interval_nano: 10,
                     iterations: Iterations::Exact(1),
                 },
                 0,
@@ -174,7 +193,8 @@ mod tests {
                 1,
                 TestPayload { a: true },
                 SchedulingInterval {
-                    duration_nano: 10,
+                    delay_nano: 10,
+                    interval_nano: 10,
                     iterations: Iterations::Infinite,
                 },
                 0,
@@ -187,7 +207,8 @@ mod tests {
                 0,
                 TestPayload { a: false },
                 SchedulingInterval {
-                    duration_nano: 20,
+                    delay_nano: 20,
+                    interval_nano: 20,
                     iterations: Iterations::Exact(2),
                 },
                 0,
@@ -285,12 +306,66 @@ mod tests {
                 0,
                 TestPayload { a: true },
                 SchedulingInterval {
-                    duration_nano: 10,
+                    delay_nano: 10,
+                    interval_nano: 10,
                     iterations: Iterations::Exact(1),
                 },
                 0,
             )
             .ok()
             .unwrap();
+    }
+
+    #[test]
+    fn delay_works_fine() {
+        let mut scheduler = TaskScheduler::default();
+
+        let task_id_1 = scheduler
+            .enqueue(
+                0,
+                TestPayload { a: true },
+                SchedulingInterval {
+                    delay_nano: 10,
+                    interval_nano: 20,
+                    iterations: Iterations::Infinite,
+                },
+                0,
+            )
+            .ok()
+            .unwrap();
+
+        let tasks = scheduler.iterate(5);
+
+        assert!(
+            tasks.is_empty(),
+            "There shouldn't be any task at this timestamp (5)"
+        );
+
+        let tasks = scheduler.iterate(10);
+        assert_eq!(
+            tasks.len(),
+            1,
+            "There should be a task that was triggered by a delay at this timestamp (10)"
+        );
+
+        let tasks = scheduler.iterate(20);
+        assert!(
+            tasks.is_empty(),
+            "There shouldn't be any task at this timestamp (20)"
+        );
+
+        let tasks = scheduler.iterate(30);
+        assert_eq!(
+            tasks.len(),
+            1,
+            "There should be a task that was triggered by an interval at this timestamp (30)"
+        );
+
+        let tasks = scheduler.iterate(50);
+        assert_eq!(
+            tasks.len(),
+            1,
+            "There should be a task that was triggered by an interval at this timestamp (50)"
+        );
     }
 }

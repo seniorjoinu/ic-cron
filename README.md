@@ -67,6 +67,7 @@ cron_enqueue(
     String::from("sweetie"), 
     // set a scheduling interval (how often and how many times to execute)
     ic_cron::types::SchedulingInterval {
+        1_000_000_000 * 60 * 5, // after waiting for 5 minutes delay once
         1_000_000_000 * 10, // each 10 seconds
         iterations: Iterations::Exact(20), // until executed 20 times
     },

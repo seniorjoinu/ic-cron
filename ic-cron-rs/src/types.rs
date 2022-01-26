@@ -21,7 +21,8 @@ pub enum Iterations {
 
 #[derive(Clone, CandidType, Deserialize)]
 pub struct SchedulingInterval {
-    pub duration_nano: u64,
+    pub delay_nano: u64,
+    pub interval_nano: u64,
     pub iterations: Iterations,
 }
 
@@ -32,6 +33,7 @@ pub struct ScheduledTask {
     pub scheduled_at: u64,
     pub rescheduled_at: Option<u64>,
     pub scheduling_interval: SchedulingInterval,
+    pub delay_passed: bool,
 }
 
 impl ScheduledTask {
@@ -54,6 +56,7 @@ impl ScheduledTask {
             scheduled_at,
             rescheduled_at,
             scheduling_interval,
+            delay_passed: false,
         })
     }
 
@@ -177,4 +180,8 @@ impl TaskExecutionQueue {
     pub fn len(&self) -> usize {
         self.0.len()
     }
+}
+
+pub enum Each {
+    Year(),
 }

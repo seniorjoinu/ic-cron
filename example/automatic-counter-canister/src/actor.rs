@@ -43,7 +43,8 @@ fn start_counter_1(duration_nano: u64) -> TaskId {
         CronTaskKind::One as u8,
         String::from("Hello from task 1!"),
         SchedulingInterval {
-            duration_nano,
+            delay_nano: duration_nano,
+            interval_nano: duration_nano,
             iterations: Iterations::Infinite,
         },
     );
@@ -72,7 +73,8 @@ fn start_counter_2(duration_nano: u64, step: u64) -> TaskId {
         CronTaskKind::Two as u8,
         step,
         SchedulingInterval {
-            duration_nano,
+            delay_nano: duration_nano,
+            interval_nano: duration_nano,
             iterations: Iterations::Infinite,
         },
     );
