@@ -1,6 +1,6 @@
 [package]
 name = "ic-cron"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Александр Втюрин <senior.joinu@gmail.com>"]
 edition = "2018"
 description = "Task scheduler rust library for the Internet Computer"
