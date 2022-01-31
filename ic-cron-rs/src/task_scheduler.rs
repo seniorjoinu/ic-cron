@@ -30,13 +30,13 @@ impl TaskScheduler {
                 if times > 0 {
                     self.queue.push(TaskTimestamp {
                         task_id: id,
-                        timestamp: timestamp + task.scheduling_interval.start_at_nano,
+                        timestamp: timestamp + task.scheduling_interval.delay_nano,
                     })
                 }
             }
             Iterations::Infinite => self.queue.push(TaskTimestamp {
                 task_id: id,
-                timestamp: timestamp + task.scheduling_interval.start_at_nano,
+                timestamp: timestamp + task.scheduling_interval.delay_nano,
             }),
         };
 
@@ -72,9 +72,9 @@ impl TaskScheduler {
                                 task.delay_passed = true;
 
                                 if let Some(rescheduled_at) = task.rescheduled_at {
-                                    rescheduled_at + task.scheduling_interval.start_at_nano
+                                    rescheduled_at + task.scheduling_interval.delay_nano
                                 } else {
-                                    task.scheduled_at + task.scheduling_interval.start_at_nano
+                                    task.scheduled_at + task.scheduling_interval.delay_nano
                                 }
                             };
 
@@ -98,9 +98,9 @@ impl TaskScheduler {
                                     task.delay_passed = true;
 
                                     if let Some(rescheduled_at) = task.rescheduled_at {
-                                        rescheduled_at + task.scheduling_interval.start_at_nano
+                                        rescheduled_at + task.scheduling_interval.delay_nano
                                     } else {
-                                        task.scheduled_at + task.scheduling_interval.start_at_nano
+                                        task.scheduled_at + task.scheduling_interval.delay_nano
                                     }
                                 };
 
@@ -178,7 +178,7 @@ mod tests {
             .enqueue(
                 TestPayload { a: true },
                 SchedulingInterval {
-                    start_at_nano: 10,
+                    delay_nano: 10,
                     interval_nano: 10,
                     iterations: Iterations::Exact(1),
                 },
@@ -191,7 +191,7 @@ mod tests {
             .enqueue(
                 TestPayload { a: true },
                 SchedulingInterval {
-                    start_at_nano: 10,
+                    delay_nano: 10,
                     interval_nano: 10,
                     iterations: Iterations::Infinite,
                 },
@@ -204,7 +204,7 @@ mod tests {
             .enqueue(
                 TestPayload { a: false },
                 SchedulingInterval {
-                    start_at_nano: 20,
+                    delay_nano: 20,
                     interval_nano: 20,
                     iterations: Iterations::Exact(2),
                 },
@@ -302,7 +302,7 @@ mod tests {
             .enqueue(
                 TestPayload { a: true },
                 SchedulingInterval {
-                    start_at_nano: 10,
+                    delay_nano: 10,
                     interval_nano: 10,
                     iterations: Iterations::Exact(1),
                 },
@@ -320,7 +320,7 @@ mod tests {
             .enqueue(
                 TestPayload { a: true },
                 SchedulingInterval {
-                    start_at_nano: 10,
+                    delay_nano: 10,
                     interval_nano: 20,
                     iterations: Iterations::Infinite,
                 },
@@ -372,7 +372,7 @@ mod tests {
             .enqueue(
                 TestPayload { a: true },
                 SchedulingInterval {
-                    start_at_nano: 10,
+                    delay_nano: 10,
                     interval_nano: 20,
                     iterations: Iterations::Infinite,
                 },

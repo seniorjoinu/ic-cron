@@ -21,7 +21,7 @@ pub enum Iterations {
 
 #[derive(Clone, Copy, CandidType, Deserialize)]
 pub struct SchedulingInterval {
-    pub start_at_nano: u64,
+    pub delay_nano: u64,
     pub interval_nano: u64,
     pub iterations: Iterations,
 }
