@@ -1,13 +1,13 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
-use ic_cdk::export::candid::{CandidType, Result as CandidResult};
+use ic_cdk::export::candid::{CandidType, Deserialize, Result as CandidResult};
 
 use crate::types::{
     Iterations, ScheduledTask, SchedulingInterval, TaskExecutionQueue, TaskId, TaskTimestamp,
 };
 
-#[derive(Default)]
+#[derive(Default, CandidType, Deserialize, Clone)]
 pub struct TaskScheduler {
     pub tasks: HashMap<TaskId, ScheduledTask>,
     pub task_id_counter: TaskId,
@@ -18,26 +18,25 @@ pub struct TaskScheduler {
 impl TaskScheduler {
     pub fn enqueue<TaskPayload: CandidType>(
         &mut self,
-        kind: u8,
         payload: TaskPayload,
         scheduling_interval: SchedulingInterval,
         timestamp: u64,
     ) -> CandidResult<TaskId> {
         let id = self.generate_task_id();
-        let task = ScheduledTask::new(id, kind, payload, timestamp, None, scheduling_interval)?;
+        let task = ScheduledTask::new(id, payload, timestamp, None, scheduling_interval)?;
 
         match task.scheduling_interval.iterations {
             Iterations::Exact(times) => {
                 if times > 0 {
                     self.queue.push(TaskTimestamp {
                         task_id: id,
-                        timestamp: timestamp + task.scheduling_interval.delay_nano,
+                        timestamp: timestamp + task.scheduling_interval.start_at_nano,
                     })
                 }
             }
             Iterations::Infinite => self.queue.push(TaskTimestamp {
                 task_id: id,
-                timestamp: timestamp + task.scheduling_interval.delay_nano,
+                timestamp: timestamp + task.scheduling_interval.start_at_nano,
             }),
         };
 
@@ -73,9 +72,9 @@ impl TaskScheduler {
                                 task.delay_passed = true;
 
                                 if let Some(rescheduled_at) = task.rescheduled_at {
-                                    rescheduled_at + task.scheduling_interval.delay_nano
+                                    rescheduled_at + task.scheduling_interval.start_at_nano
                                 } else {
-                                    task.scheduled_at + task.scheduling_interval.delay_nano
+                                    task.scheduled_at + task.scheduling_interval.start_at_nano
                                 }
                             };
 
@@ -99,9 +98,9 @@ impl TaskScheduler {
                                     task.delay_passed = true;
 
                                     if let Some(rescheduled_at) = task.rescheduled_at {
-                                        rescheduled_at + task.scheduling_interval.delay_nano
+                                        rescheduled_at + task.scheduling_interval.start_at_nano
                                     } else {
-                                        task.scheduled_at + task.scheduling_interval.delay_nano
+                                        task.scheduled_at + task.scheduling_interval.start_at_nano
                                     }
                                 };
 
@@ -160,6 +159,7 @@ impl TaskScheduler {
 
 #[cfg(test)]
 mod tests {
+    use ic_cdk::export::candid::{decode_one, encode_one};
     use ic_cdk::export::candid::{CandidType, Deserialize};
 
     use crate::task_scheduler::TaskScheduler;
@@ -176,10 +176,9 @@ mod tests {
 
         let task_id_1 = scheduler
             .enqueue(
-                0,
                 TestPayload { a: true },
                 SchedulingInterval {
-                    delay_nano: 10,
+                    start_at_nano: 10,
                     interval_nano: 10,
                     iterations: Iterations::Exact(1),
                 },
@@ -190,10 +189,9 @@ mod tests {
 
         let task_id_2 = scheduler
             .enqueue(
-                1,
                 TestPayload { a: true },
                 SchedulingInterval {
-                    delay_nano: 10,
+                    start_at_nano: 10,
                     interval_nano: 10,
                     iterations: Iterations::Infinite,
                 },
@@ -204,10 +202,9 @@ mod tests {
 
         let task_id_3 = scheduler
             .enqueue(
-                0,
                 TestPayload { a: false },
                 SchedulingInterval {
-                    delay_nano: 20,
+                    start_at_nano: 20,
                     interval_nano: 20,
                     iterations: Iterations::Exact(2),
                 },
@@ -303,10 +300,9 @@ mod tests {
 
         scheduler
             .enqueue(
-                0,
                 TestPayload { a: true },
                 SchedulingInterval {
-                    delay_nano: 10,
+                    start_at_nano: 10,
                     interval_nano: 10,
                     iterations: Iterations::Exact(1),
                 },
@@ -322,10 +318,9 @@ mod tests {
 
         let task_id_1 = scheduler
             .enqueue(
-                0,
                 TestPayload { a: true },
                 SchedulingInterval {
-                    delay_nano: 10,
+                    start_at_nano: 10,
                     interval_nano: 20,
                     iterations: Iterations::Infinite,
                 },
@@ -366,6 +361,36 @@ mod tests {
             tasks.len(),
             1,
             "There should be a task that was triggered by an interval at this timestamp (50)"
+        );
+    }
+
+    #[test]
+    fn ser_de_works_fine() {
+        let mut scheduler = TaskScheduler::default();
+
+        scheduler
+            .enqueue(
+                TestPayload { a: true },
+                SchedulingInterval {
+                    start_at_nano: 10,
+                    interval_nano: 20,
+                    iterations: Iterations::Infinite,
+                },
+                0,
+            )
+            .ok()
+            .unwrap();
+
+        let bytes = encode_one(scheduler).expect("Should be able to encode task scheduler");
+        let mut scheduler: TaskScheduler =
+            decode_one(&bytes).expect("Should be able to decode task scheduler");
+
+        let tasks = scheduler.iterate(10);
+
+        assert_eq!(
+            tasks.len(),
+            1,
+            "There should be a task that was triggered by a delay at this timestamp (10)"
         );
     }
 }

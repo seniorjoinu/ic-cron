@@ -6,12 +6,8 @@ Task scheduler rust library for the Internet Computer
 
 The IC provides built-in "heartbeat" functionality which is basically a special function that gets executed each time
 consensus ticks. But this is not enough for a comprehensive task scheduling - you still have to implement scheduling
-logic by yourself. This rust library does exactly that.
-
-Moreover, this library can help optimize scenarios when your canister sends a lot of messages, when there are more than
-one message per single recipient. In that case you could, instead of sending them all immediately, store them in some
-buffer and schedule an `ic-cron` task to batch-send them, once the task is executed, consuming only one message per
-block, per unique recipient.
+logic by yourself. This rust library does exactly that - provides you with simple APIs for complex background scheduling 
+scenarios to execute your code at any specific time, as many times as you want.
 
 ### Installation
 
@@ -21,59 +17,67 @@ Make sure you're using `dfx 0.8.4` or higher.
 # Cargo.toml
 
 [dependencies]
-ic-cron = "0.4"
+ic-cron = "0.5"
 ```
 
 ### Usage
 
 ```rust
 // somewhere in your canister's code
-
 ic_cron::implement_cron!();
 
-// this step is optional - you can use simple u8's to differ between task handlers
-ic_cron::u8_enum! {
-    pub enum TaskKind {
-        SendGoodMorning,
-        TransferTokens,
-    }
+#[derive(CandidType, Deserialize)]
+enum TaskKind {
+    SendGoodMorning(String),
+    DoSomethingElse,
+}
+
+// enqueue a task
+#[ic_cdk_macros::update]
+pub fn enqueue_task_1() {
+    cron_enqueue(
+        // set a task payload - any CandidType is supported
+        TaskKind::SendGoodMorning(String::from("sweetie")),
+        // set a scheduling interval (how often and how many times to execute)
+        ic_cron::types::SchedulingInterval {
+            1_000_000_000 * 60 * 5, // after waiting for 5 minutes delay once
+            1_000_000_000 * 10, // each 10 seconds
+            iterations: Iterations::Exact(20), // until executed 20 times
+        },
+    );
+}
+
+// enqueue another task
+#[ic_cdk_macros::update]
+pub fn enqueue_task_2() {
+    cron_enqueue(
+        TaskKind::DoSomethingElse,
+        ic_cron::types::SchedulingInterval {
+            0, // start immediately
+            1_000_000_000 * 60 * 5, // each 5 minutes
+            iterations: Iterations::Infinite, // repeat infinitely
+        },
+    );
 }
 
 // in a canister heartbeat function get all tasks ready for execution at this exact moment and use it
 #[ic_cdk_macros::heartbeat]
 fn heartbeat() {
+    // cron_ready_tasks will only return tasks which should be executed right now
     for task in cron_ready_tasks() {
-        match task.get_kind().try_into() {
-            Ok(TaskKind::SendGoodMorning) => {
-                let name = task.get_payload::<String>().unwrap();
-          
+        let kind = task.get_payload::<TaskKind>().expect("Serialization error");
+      
+        match kind {
+            TaskKind::SendGoodMorning(name) => {
                 // will print "Good morning, sweetie!"      
-                say(format!("Good morning, {}!", name));
+                println!("Good morning, {}!", name);
             },
-            Ok(TaskKind::TransferTokens) => {
+            TaskKind::DoSomethingElse => {
                 ...
             },
-            Err(e) => trap(e),
         };   
     }
 }
-
-...
-
-// inside any #[update] function
-// enqueue a task
-cron_enqueue(
-    // set a task kind so later you could decide how to handle it's execution
-    TaskKind::SendGoodMorning as u8,
-    // set a task payload - any CandidType is supported, so custom types would also work fine
-    String::from("sweetie"), 
-    // set a scheduling interval (how often and how many times to execute)
-    ic_cron::types::SchedulingInterval {
-        1_000_000_000 * 60 * 5, // after waiting for 5 minutes delay once
-        1_000_000_000 * 10, // each 10 seconds
-        iterations: Iterations::Exact(20), // until executed 20 times
-    },
-);
 ```
 
 ### How many cycles does it consume?
@@ -92,13 +96,7 @@ compensates an error caused by unstable consensus intervals.
 
 ## Limitations
 
-1. Right now `ic-cron` doesn't support canister upgrades, so all your queued tasks will be lost. This is due to a
-limitation in `ic-cdk`, which doesn't support multiple stable variables at this moment. Once they do, I'll update this
-library, so it will handle canister upgrades gracefully.
-If you really want this functionality right now, you may try to serialize the state manually using `get_cron_state()`
-function.
-
-2. Since `ic-cron` can't pulse faster than the consensus ticks, it has an error of ~2s. So make sure you're not using a
+1. Since `ic-cron` can't pulse faster than the consensus ticks, it has an error of ~2s. So make sure you're not using a
 `duration_nano` interval less than 3s, otherwise it won't work as expected.
 
 ## API
@@ -119,7 +117,6 @@ Schedules a new task. Returns task id, which then can be used in `cron_dequeue()
 
 Params:
 
-* `kind: u8` - used to differentiate the way you want to process this task once it's executed
 * `payload: CandidType` - the data you want to provide with the task
 * `scheduling_interval: SchedulingInterval` - how often your task should be executed and how many times it should be
   rescheduled
@@ -149,14 +146,37 @@ Returns:
 
 * `Vec<ScheduledTask>` - vec of tasks to handle
 
-### u8_enum!()
-
-Helper macro which will automatically derive `TryInto<u8>` for your enum.
-
 ### get_cron_state()
 
-Returns an object which can be used to observe scheduler's state and modify it. Mostly intended for advanced users who
-want to extend `ic-cron`. See the [source code](ic-cron-rs/src/task_scheduler.rs) for further info.
+Returns a static mutable reference to object which can be used to observe scheduler's state and modify it. Mostly 
+intended for advanced users who want to extend `ic-cron`. See the [source code](ic-cron-rs/src/task_scheduler.rs) for 
+further info.
+
+### set_cron_state()
+
+Sets the global state of the task scheduler, so this new state is accessible from `get_cron_state()` function.
+
+Params:
+
+* `TaskScheduler` - state object you can get from `get_cron_state()` function
+
+These two functions could be used to persist scheduled tasks between canister upgrades:
+```rust
+#[ic_cdk_macros::pre_upgrade]
+fn pre_upgrade_hook() {
+    let cron_state = get_cron_state().clone();
+
+    stable_save((cron_state,)).expect("Unable to save the state to stable memory");
+}
+
+#[ic_cdk_macros::post_upgrade]
+fn post_upgrade_hook() {
+    let (cron_state,): (TaskScheduler,) =
+          stable_restore().expect("Unable to restore the state from stable memory");
+
+    set_cron_state(cron_state);
+}
+```
 
 ## Candid
 

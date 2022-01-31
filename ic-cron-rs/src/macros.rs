@@ -1,28 +1,33 @@
 #[macro_export]
 macro_rules! implement_cron {
     () => {
-        static mut CRON: Option<ic_cron::task_scheduler::TaskScheduler> = None;
+        pub static mut CRON_STATE: Option<ic_cron::task_scheduler::TaskScheduler> = None;
 
         pub fn get_cron_state() -> &'static mut ic_cron::task_scheduler::TaskScheduler {
             unsafe {
-                match CRON.as_mut() {
+                match CRON_STATE.as_mut() {
                     Some(cron) => cron,
                     None => {
-                        CRON = Some(ic_cron::task_scheduler::TaskScheduler::default());
+                        set_cron_state(ic_cron::task_scheduler::TaskScheduler::default());
                         get_cron_state()
                     }
                 }
             }
         }
 
+        pub fn set_cron_state(state: ic_cron::task_scheduler::TaskScheduler) {
+            unsafe {
+                CRON_STATE = Some(state);
+            }
+        }
+
         pub fn cron_enqueue<Payload: ic_cdk::export::candid::CandidType>(
-            kind: u8,
             payload: Payload,
             scheduling_interval: ic_cron::types::SchedulingInterval,
         ) -> ic_cdk::export::candid::Result<ic_cron::types::TaskId> {
             let cron = get_cron_state();
 
-            let id = cron.enqueue(kind, payload, scheduling_interval, ic_cdk::api::time())?;
+            let id = cron.enqueue(payload, scheduling_interval, ic_cdk::api::time())?;
 
             Ok(id)
         }
@@ -39,52 +44,38 @@ macro_rules! implement_cron {
     };
 }
 
-#[macro_export]
-macro_rules! u8_enum {
-    ($(#[$meta:meta])* $vis:vis enum $name:ident {
-        $($(#[$vmeta:meta])* $vname:ident $(= $val:expr)?,)*
-    }) => {
-        $(#[$meta])*
-        $vis enum $name {
-            $($(#[$vmeta])* $vname $(= $val)?,)*
-        }
-
-        impl std::convert::TryFrom<u8> for $name {
-            type Error = ();
-
-            fn try_from(v: u8) -> Result<Self, Self::Error> {
-                match v {
-                    $(x if x == $name::$vname as u8 => Ok($name::$vname),)*
-                    _ => Err(()),
-                }
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use crate as ic_cron;
     use crate::implement_cron;
-    use core::convert::TryInto;
+    use crate::task_scheduler::TaskScheduler;
+    use ic_cdk::storage::{stable_restore, stable_save};
+    use ic_cdk_macros::{heartbeat, post_upgrade, pre_upgrade};
 
     implement_cron!();
 
-    u8_enum! {
-        pub enum HanlderKind {
-            First,
-            Second,
-        }
+    #[pre_upgrade]
+    fn pre_upgrade_hook() {
+        let cron_state = get_cron_state().clone();
+
+        stable_save((cron_state,)).expect("Unable to save the state to stable memory");
     }
 
-    #[export_name = "canister_heartbeat"]
-    fn heartbeat() {
-        for task in cron_ready_tasks() {
-            match task.get_kind().try_into() {
-                Ok(HanlderKind::First) => {}
-                Ok(HanlderKind::Second) => {}
-                Err(_) => {}
-            }
-        }
+    #[post_upgrade]
+    fn post_upgrade_hook() {
+        let (cron_state,): (TaskScheduler,) =
+            stable_restore().expect("Unable to restore the state from stable memory");
+
+        set_cron_state(cron_state);
+    }
+
+    #[heartbeat]
+    fn tick() {
+        let tasks = cron_ready_tasks();
+    }
+
+    #[test]
+    fn no_op() {
+        assert!(true);
     }
 }

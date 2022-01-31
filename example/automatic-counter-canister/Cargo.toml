@@ -13,4 +13,3 @@ ic-cdk = "0.3"
 ic-cdk-macros = "0.3"
 serde = "1.0"
 ic-cron = { path = "../../ic-cron-rs" }
-union-utils = "0.1"

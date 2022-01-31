@@ -1,6 +1,7 @@
 use std::cmp::{max, min, Ordering};
 use std::collections::BinaryHeap;
 
+use ic_cdk::export::candid::types::{Serializer, Type};
 use ic_cdk::export::candid::{
     decode_one, encode_one, CandidType, Deserialize, Result as CandidResult,
 };
@@ -9,19 +10,18 @@ pub type TaskId = u64;
 
 #[derive(Clone, CandidType, Deserialize)]
 pub struct Task {
-    pub kind: u8,
     pub data: Vec<u8>,
 }
 
-#[derive(Clone, CandidType, Deserialize)]
+#[derive(Clone, Copy, CandidType, Deserialize)]
 pub enum Iterations {
     Infinite,
     Exact(u64),
 }
 
-#[derive(Clone, CandidType, Deserialize)]
+#[derive(Clone, Copy, CandidType, Deserialize)]
 pub struct SchedulingInterval {
-    pub delay_nano: u64,
+    pub start_at_nano: u64,
     pub interval_nano: u64,
     pub iterations: Iterations,
 }
@@ -39,14 +39,12 @@ pub struct ScheduledTask {
 impl ScheduledTask {
     pub fn new<TaskPayload: CandidType>(
         id: TaskId,
-        kind: u8,
         payload: TaskPayload,
         scheduled_at: u64,
         rescheduled_at: Option<u64>,
         scheduling_interval: SchedulingInterval,
     ) -> CandidResult<Self> {
         let task = Task {
-            kind,
             data: encode_one(payload).unwrap(),
         };
 
@@ -66,12 +64,9 @@ impl ScheduledTask {
     {
         decode_one(&self.payload.data)
     }
-
-    pub fn get_kind(&self) -> u8 {
-        self.payload.kind
-    }
 }
 
+#[derive(CandidType, Deserialize, Clone, Copy)]
 pub struct TaskTimestamp {
     pub task_id: TaskId,
     pub timestamp: u64,
@@ -142,7 +137,7 @@ impl Ord for TaskTimestamp {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Deserialize, Clone)]
 pub struct TaskExecutionQueue(BinaryHeap<TaskTimestamp>);
 
 impl TaskExecutionQueue {
@@ -182,6 +177,19 @@ impl TaskExecutionQueue {
     }
 }
 
-pub enum Each {
-    Year(),
+impl CandidType for TaskExecutionQueue {
+    fn _ty() -> Type {
+        Type::Vec(Box::new(TaskTimestamp::_ty()))
+    }
+
+    fn ty() -> Type {
+        Self::_ty()
+    }
+
+    fn idl_serialize<S>(&self, serializer: S) -> Result<(), S::Error>
+    where
+        S: Serializer,
+    {
+        self.clone().0.into_sorted_vec().idl_serialize(serializer)
+    }
 }
