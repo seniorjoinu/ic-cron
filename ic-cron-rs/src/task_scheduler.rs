@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use ic_cdk::export::candid::{CandidType, Deserialize, Result as CandidResult};
 
 use crate::types::{
-    Iterations, ScheduledTask, SchedulingInterval, TaskExecutionQueue, TaskId, TaskTimestamp,
+    Iterations, ScheduledTask, SchedulingOptions, TaskExecutionQueue, TaskId, TaskTimestamp,
 };
 
 #[derive(Default, CandidType, Deserialize, Clone)]
@@ -19,24 +19,24 @@ impl TaskScheduler {
     pub fn enqueue<TaskPayload: CandidType>(
         &mut self,
         payload: TaskPayload,
-        scheduling_interval: SchedulingInterval,
+        scheduling_interval: SchedulingOptions,
         timestamp: u64,
     ) -> CandidResult<TaskId> {
         let id = self.generate_task_id();
         let task = ScheduledTask::new(id, payload, timestamp, None, scheduling_interval)?;
 
-        match task.scheduling_interval.iterations {
+        match task.scheduling_options.iterations {
             Iterations::Exact(times) => {
                 if times > 0 {
                     self.queue.push(TaskTimestamp {
                         task_id: id,
-                        timestamp: timestamp + task.scheduling_interval.delay_nano,
+                        timestamp: timestamp + task.scheduling_options.delay_nano,
                     })
                 }
             }
             Iterations::Infinite => self.queue.push(TaskTimestamp {
                 task_id: id,
-                timestamp: timestamp + task.scheduling_interval.delay_nano,
+                timestamp: timestamp + task.scheduling_options.delay_nano,
             }),
         };
 
@@ -60,21 +60,21 @@ impl TaskScheduler {
                 Entry::Occupied(mut entry) => {
                     let task = entry.get_mut();
 
-                    match task.scheduling_interval.iterations {
+                    match task.scheduling_options.iterations {
                         Iterations::Infinite => {
                             let new_rescheduled_at = if task.delay_passed {
                                 if let Some(rescheduled_at) = task.rescheduled_at {
-                                    rescheduled_at + task.scheduling_interval.interval_nano
+                                    rescheduled_at + task.scheduling_options.interval_nano
                                 } else {
-                                    task.scheduled_at + task.scheduling_interval.interval_nano
+                                    task.scheduled_at + task.scheduling_options.interval_nano
                                 }
                             } else {
                                 task.delay_passed = true;
 
                                 if let Some(rescheduled_at) = task.rescheduled_at {
-                                    rescheduled_at + task.scheduling_interval.delay_nano
+                                    rescheduled_at + task.scheduling_options.delay_nano
                                 } else {
-                                    task.scheduled_at + task.scheduling_interval.delay_nano
+                                    task.scheduled_at + task.scheduling_options.delay_nano
                                 }
                             };
 
@@ -83,24 +83,24 @@ impl TaskScheduler {
                             self.queue.push(TaskTimestamp {
                                 task_id,
                                 timestamp: new_rescheduled_at
-                                    + task.scheduling_interval.interval_nano,
+                                    + task.scheduling_options.interval_nano,
                             });
                         }
                         Iterations::Exact(times_left) => {
                             if times_left > 1 {
                                 let new_rescheduled_at = if task.delay_passed {
                                     if let Some(rescheduled_at) = task.rescheduled_at {
-                                        rescheduled_at + task.scheduling_interval.interval_nano
+                                        rescheduled_at + task.scheduling_options.interval_nano
                                     } else {
-                                        task.scheduled_at + task.scheduling_interval.interval_nano
+                                        task.scheduled_at + task.scheduling_options.interval_nano
                                     }
                                 } else {
                                     task.delay_passed = true;
 
                                     if let Some(rescheduled_at) = task.rescheduled_at {
-                                        rescheduled_at + task.scheduling_interval.delay_nano
+                                        rescheduled_at + task.scheduling_options.delay_nano
                                     } else {
-                                        task.scheduled_at + task.scheduling_interval.delay_nano
+                                        task.scheduled_at + task.scheduling_options.delay_nano
                                     }
                                 };
 
@@ -109,10 +109,10 @@ impl TaskScheduler {
                                 self.queue.push(TaskTimestamp {
                                     task_id,
                                     timestamp: new_rescheduled_at
-                                        + task.scheduling_interval.interval_nano,
+                                        + task.scheduling_options.interval_nano,
                                 });
 
-                                task.scheduling_interval.iterations =
+                                task.scheduling_options.iterations =
                                     Iterations::Exact(times_left - 1);
                             } else {
                                 should_remove = true;
@@ -141,11 +141,19 @@ impl TaskScheduler {
         self.queue.is_empty()
     }
 
-    pub fn get_task_by_id(&self, task_id: &TaskId) -> Option<ScheduledTask> {
-        self.tasks.get(task_id).cloned()
+    pub fn get_task(&self, task_id: &TaskId) -> Option<&ScheduledTask> {
+        self.tasks.get(task_id)
     }
 
-    pub fn get_tasks(&self) -> Vec<ScheduledTask> {
+    pub fn get_task_mut(&mut self, task_id: &TaskId) -> Option<&mut ScheduledTask> {
+        self.tasks.get_mut(task_id)
+    }
+
+    pub fn get_task_by_id_cloned(&self, task_id: &TaskId) -> Option<ScheduledTask> {
+        self.get_task(task_id).cloned()
+    }
+
+    pub fn get_tasks_cloned(&self) -> Vec<ScheduledTask> {
         self.tasks.values().cloned().collect()
     }
 
@@ -163,7 +171,7 @@ mod tests {
     use ic_cdk::export::candid::{CandidType, Deserialize};
 
     use crate::task_scheduler::TaskScheduler;
-    use crate::types::{Iterations, SchedulingInterval};
+    use crate::types::{Iterations, SchedulingOptions};
 
     #[derive(CandidType, Deserialize)]
     pub struct TestPayload {
@@ -177,7 +185,7 @@ mod tests {
         let task_id_1 = scheduler
             .enqueue(
                 TestPayload { a: true },
-                SchedulingInterval {
+                SchedulingOptions {
                     delay_nano: 10,
                     interval_nano: 10,
                     iterations: Iterations::Exact(1),
@@ -190,7 +198,7 @@ mod tests {
         let task_id_2 = scheduler
             .enqueue(
                 TestPayload { a: true },
-                SchedulingInterval {
+                SchedulingOptions {
                     delay_nano: 10,
                     interval_nano: 10,
                     iterations: Iterations::Infinite,
@@ -203,7 +211,7 @@ mod tests {
         let task_id_3 = scheduler
             .enqueue(
                 TestPayload { a: false },
-                SchedulingInterval {
+                SchedulingOptions {
                     delay_nano: 20,
                     interval_nano: 20,
                     iterations: Iterations::Exact(2),
@@ -301,7 +309,7 @@ mod tests {
         scheduler
             .enqueue(
                 TestPayload { a: true },
-                SchedulingInterval {
+                SchedulingOptions {
                     delay_nano: 10,
                     interval_nano: 10,
                     iterations: Iterations::Exact(1),
@@ -319,7 +327,7 @@ mod tests {
         let task_id_1 = scheduler
             .enqueue(
                 TestPayload { a: true },
-                SchedulingInterval {
+                SchedulingOptions {
                     delay_nano: 10,
                     interval_nano: 20,
                     iterations: Iterations::Infinite,
@@ -371,7 +379,7 @@ mod tests {
         scheduler
             .enqueue(
                 TestPayload { a: true },
-                SchedulingInterval {
+                SchedulingOptions {
                     delay_nano: 10,
                     interval_nano: 20,
                     iterations: Iterations::Infinite,

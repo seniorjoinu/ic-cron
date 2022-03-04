@@ -20,7 +20,7 @@ pub enum Iterations {
 }
 
 #[derive(Clone, Copy, CandidType, Deserialize)]
-pub struct SchedulingInterval {
+pub struct SchedulingOptions {
     pub delay_nano: u64,
     pub interval_nano: u64,
     pub iterations: Iterations,
@@ -32,7 +32,7 @@ pub struct ScheduledTask {
     pub payload: Task,
     pub scheduled_at: u64,
     pub rescheduled_at: Option<u64>,
-    pub scheduling_interval: SchedulingInterval,
+    pub scheduling_options: SchedulingOptions,
     pub delay_passed: bool,
 }
 
@@ -42,7 +42,7 @@ impl ScheduledTask {
         payload: TaskPayload,
         scheduled_at: u64,
         rescheduled_at: Option<u64>,
-        scheduling_interval: SchedulingInterval,
+        scheduling_interval: SchedulingOptions,
     ) -> CandidResult<Self> {
         let task = Task {
             data: encode_one(payload).unwrap(),
@@ -53,7 +53,7 @@ impl ScheduledTask {
             payload: task,
             scheduled_at,
             rescheduled_at,
-            scheduling_interval,
+            scheduling_options: scheduling_interval,
             delay_passed: false,
         })
     }

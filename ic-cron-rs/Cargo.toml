@@ -1,6 +1,6 @@
 [package]
 name = "ic-cron"
-version = "0.5.1"
+version = "0.6.0"
 authors = ["Александр Втюрин <senior.joinu@gmail.com>"]
 edition = "2018"
 description = "Task scheduler rust library for the Internet Computer"
@@ -9,6 +9,6 @@ readme = "../README.md"
 keywords = ["dfinity", "internet-computer", "ic", "cron", "cronjob"]
 
 [dependencies]
-ic-cdk = "0.3"
-ic-cdk-macros = "0.3"
+ic-cdk = "0.4.0"
+ic-cdk-macros = "0.4.0"
 serde = "1.0"

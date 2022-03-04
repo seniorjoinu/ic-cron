@@ -23,11 +23,11 @@ macro_rules! implement_cron {
 
         pub fn cron_enqueue<Payload: ic_cdk::export::candid::CandidType>(
             payload: Payload,
-            scheduling_interval: ic_cron::types::SchedulingInterval,
+            scheduling_options: ic_cron::types::SchedulingOptions,
         ) -> ic_cdk::export::candid::Result<ic_cron::types::TaskId> {
             let cron = get_cron_state();
 
-            let id = cron.enqueue(payload, scheduling_interval, ic_cdk::api::time())?;
+            let id = cron.enqueue(payload, scheduling_options, ic_cdk::api::time())?;
 
             Ok(id)
         }

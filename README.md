@@ -17,7 +17,7 @@ Make sure you're using `dfx 0.8.4` or higher.
 # Cargo.toml
 
 [dependencies]
-ic-cron = "0.5"
+ic-cron = "0.6"
 ```
 
 ### Usage
@@ -39,7 +39,7 @@ pub fn enqueue_task_1() {
         // set a task payload - any CandidType is supported
         TaskKind::SendGoodMorning(String::from("sweetie")),
         // set a scheduling interval (how often and how many times to execute)
-        ic_cron::types::SchedulingInterval {
+        ic_cron::types::SchedulingOptions {
             1_000_000_000 * 60 * 5, // after waiting for 5 minutes delay once
             1_000_000_000 * 10, // each 10 seconds
             iterations: Iterations::Exact(20), // until executed 20 times
@@ -52,7 +52,7 @@ pub fn enqueue_task_1() {
 pub fn enqueue_task_2() {
     cron_enqueue(
         TaskKind::DoSomethingElse,
-        ic_cron::types::SchedulingInterval {
+        ic_cron::types::SchedulingOptions {
             0, // start immediately
             1_000_000_000 * 60 * 5, // each 5 minutes
             iterations: Iterations::Infinite, // repeat infinitely
@@ -96,8 +96,13 @@ compensates an error caused by unstable consensus intervals.
 
 ## Limitations
 
-1. Since `ic-cron` can't pulse faster than the consensus ticks, it has an error of ~2s. So make sure you're not using a
-`duration_nano` interval less than 3s, otherwise it won't work as expected.
+Since `ic-cron` can't pulse faster than the consensus ticks, it has an error of ~2s. 
+
+## Tutorials
+* [Introduction To ic-cron Library](https://dev.to/seniorjoinu/introduction-to-ic-cron-library-17g1)
+* [Extending Sonic With Limit Orders Using ic-cron Library](https://hackernoon.com/tutorial-extending-sonic-with-limit-orders-using-ic-cron-library)
+* [How to Execute Background Tasks on Particular Weekdays with IC-Cron and Chrono](https://hackernoon.com/how-to-execute-background-tasks-on-particular-weekdays-with-ic-cron-and-chrono)
+* [How To Build A Token With Recurrent Payments On The Internet Computer Using ic-cron Library](https://dev.to/seniorjoinu/tutorial-how-to-build-a-token-with-recurrent-payments-on-the-internet-computer-using-ic-cron-library-3l2h)
 
 ## API
 
@@ -108,7 +113,7 @@ See the [example](./example) project for better understanding.
 This macro will implement all the functions you will use: `get_cron_state()`, `cron_enqueue()`, `cron_dequeue()`
 and `cron_ready_tasks()`.
 
-Basically this macros implements an inheritance pattern. Just like in a regular object-oriented programming language.
+Basically, this macro implements an inheritance pattern. Just like in a regular object-oriented programming language.
 Check the [source code](ic-cron-rs/src/macros.rs) for further info.
 
 ### cron_enqueue()
@@ -184,6 +189,6 @@ You don't need to modify your `.did` file for this library to work.
 
 ## Contribution
 
-You can reach me out here on github opening an issue, or you could start a thread on dfinity's developer forum.
+You can reach me out here on Github opening an issue, or you could start a thread on Dfinity developer forum.
 
 You're also welcome to suggest new features and open PR's.

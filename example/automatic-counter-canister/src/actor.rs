@@ -3,7 +3,7 @@ use ic_cdk::trap;
 use ic_cdk_macros::{heartbeat, init, query, update};
 
 use ic_cron::implement_cron;
-use ic_cron::types::{Iterations, SchedulingInterval, TaskId};
+use ic_cron::types::{Iterations, SchedulingOptions, TaskId};
 
 // ------------- MAIN LOGIC -------------------
 
@@ -34,7 +34,7 @@ fn start_counter_1(duration_nano: u64) -> TaskId {
 
     let res = cron_enqueue(
         CronTaskKind::One(String::from("Hello from task 1!")),
-        SchedulingInterval {
+        SchedulingOptions {
             delay_nano: duration_nano,
             interval_nano: duration_nano,
             iterations: Iterations::Infinite,
@@ -63,7 +63,7 @@ fn start_counter_2(duration_nano: u64, step: u64) -> TaskId {
 
     let res = cron_enqueue(
         CronTaskKind::Two(step),
-        SchedulingInterval {
+        SchedulingOptions {
             delay_nano: duration_nano,
             interval_nano: duration_nano,
             iterations: Iterations::Infinite,
