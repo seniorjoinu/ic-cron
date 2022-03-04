@@ -64,6 +64,10 @@ impl ScheduledTask {
     {
         decode_one(&self.payload.data)
     }
+
+    pub fn set_payload<T: CandidType>(&mut self, payload: T) {
+        self.payload.data = encode_one(payload).unwrap()
+    }
 }
 
 #[derive(CandidType, Deserialize, Clone, Copy)]
