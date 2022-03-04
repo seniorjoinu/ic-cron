@@ -12,3 +12,4 @@ keywords = ["dfinity", "internet-computer", "ic", "cron", "cronjob"]
 ic-cdk = "0.4.0"
 ic-cdk-macros = "0.4.0"
 serde = "1.0"
+candid = "0.7.11"
