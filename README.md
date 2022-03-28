@@ -17,7 +17,7 @@ Make sure you're using `dfx 0.8.4` or higher.
 # Cargo.toml
 
 [dependencies]
-ic-cron = "0.6"
+ic-cron = "0.7"
 ```
 
 ### Usage
@@ -157,29 +157,34 @@ Returns a static mutable reference to object which can be used to observe schedu
 intended for advanced users who want to extend `ic-cron`. See the [source code](ic-cron-rs/src/task_scheduler.rs) for 
 further info.
 
-### set_cron_state()
+### _take_cron_state()
+
+Returns (moved) the cron state. Used to upgrade a canister without state cloning. Make sure you're not using `get_cron_state()`
+before `_put_cron_state()` after you call this function.
+
+### _put_cron_state()
 
 Sets the global state of the task scheduler, so this new state is accessible from `get_cron_state()` function.
 
 Params:
 
-* `TaskScheduler` - state object you can get from `get_cron_state()` function
+* `Option<TaskScheduler>` - state object you can get from `get_cron_state()` function
 
 These two functions could be used to persist scheduled tasks between canister upgrades:
 ```rust
 #[ic_cdk_macros::pre_upgrade]
 fn pre_upgrade_hook() {
-    let cron_state = get_cron_state().clone();
+    let cron_state = _take_cron_state();
 
     stable_save((cron_state,)).expect("Unable to save the state to stable memory");
 }
 
 #[ic_cdk_macros::post_upgrade]
 fn post_upgrade_hook() {
-    let (cron_state,): (TaskScheduler,) =
+    let (cron_state,): (Option<TaskScheduler>,) =
           stable_restore().expect("Unable to restore the state from stable memory");
 
-    set_cron_state(cron_state);
+    _put_cron_state(cron_state);
 }
 ```
 
